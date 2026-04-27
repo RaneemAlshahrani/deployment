@@ -71,35 +71,34 @@ function Cart() {
   const [wishlistItems, setWishlistItems] = useState([]);
 
   useEffect(() => {
-    const storedCart = JSON.parse(localStorage.getItem("cartItems")) || [];
+    const fetchCart = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/cart/testUser");
+        const data = await response.json();
+
+        setCartItems(
+          data.map((item) => ({
+            _id: item._id,
+            name: item.productId?.name,
+            price: item.productId?.price,
+            image: `/images/${item.productId?.image}`,
+            stock: item.productId?.stock,
+            quantity: item.quantity,
+            error: "",
+          }))
+        );
+      } catch (error) {
+        console.error("Failed to fetch cart:", error);
+      }
+    };
+
+    fetchCart();
+
     const storedWishlist =
       JSON.parse(localStorage.getItem("wishlistItems")) || [];
 
-    setCartItems(
-      storedCart.map((item) => ({
-        ...item,
-        error: "",
-      }))
-    );
-
     setWishlistItems(storedWishlist);
   }, []);
-
-  const cartWithDetails = cartItems
-    .map((item) => {
-      const product = allProducts.find((p) => p.id === item.id);
-      if (!product) return null;
-
-      return {
-        ...item,
-        name: product.name,
-        price: item.customPrice ?? product.price,
-        image: product.image,
-        stock: product.stock,
-        inStock: product.inStock,
-      };
-    })
-    .filter(Boolean);
 
   const wishlistWithDetails = wishlistItems
     .map((item) => {
@@ -117,7 +116,7 @@ function Cart() {
     })
     .filter(Boolean);
 
-  const subtotal = cartWithDetails.reduce(
+  const subtotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
@@ -173,47 +172,38 @@ function Cart() {
     setDiscountMessage("Discount applied successfully");
   };
 
-  const updateCartQuantity = (itemToUpdate, change) => {
+  const updateCartQuantity = async (itemToUpdate, change) => {
     setCartMessage("");
 
-    const updatedCart = cartItems.map((item) => {
-      const isSameCustomItem =
-        item.customId && itemToUpdate.customId
-          ? item.customId === itemToUpdate.customId
-          : item.id === itemToUpdate.id;
+    const newQuantity = itemToUpdate.quantity + change;
 
-      if (!isSameCustomItem) return item;
+    if (newQuantity < 1) return;
+    if (newQuantity > itemToUpdate.stock) return;
 
-      const product = allProducts.find((p) => p.id === item.id);
-      const stock = product?.stock ?? 0;
-      const newQuantity = item.quantity + change;
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/cart/${itemToUpdate._id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ quantity: newQuantity }),
+        }
+      );
 
-      if (newQuantity < 1) {
-        return {
-          ...item,
-          error: "Quantity must be ≥ 1",
-        };
-      }
+      if (!response.ok) throw new Error("Failed to update");
 
-      if (newQuantity > stock) {
-        return {
-          ...item,
-          error: "Cannot exceed available stock",
-        };
-      }
-
-      return {
-        ...item,
-        quantity: newQuantity,
-        error: "",
-      };
-    });
-
-    setCartItems(updatedCart);
-    localStorage.setItem(
-      "cartItems",
-      JSON.stringify(updatedCart.map(({ error, ...rest }) => rest))
-    );
+      setCartItems((prev) =>
+        prev.map((item) =>
+          item._id === itemToUpdate._id
+            ? { ...item, quantity: newQuantity }
+            : item
+        )
+      );
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const updateWishlistQuantity = (id, change) => {
@@ -249,20 +239,25 @@ function Cart() {
     localStorage.setItem("wishlistItems", JSON.stringify(updatedWishlist));
   };
 
-  const removeCartItem = (itemToRemove) => {
-    const updatedCart = cartItems.filter((item) => {
-      if (item.customId && itemToRemove.customId) {
-        return item.customId !== itemToRemove.customId;
-      }
-      return item.id !== itemToRemove.id;
-    });
+  const removeCartItem = async (itemToRemove) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/cart/${itemToRemove._id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
-    setCartItems(updatedCart);
-    localStorage.setItem(
-      "cartItems",
-      JSON.stringify(updatedCart.map(({ error, ...rest }) => rest))
-    );
-    setCartMessage("Product removed successfully");
+      if (!response.ok) throw new Error("Failed to delete");
+
+      setCartItems((prev) =>
+        prev.filter((item) => item._id !== itemToRemove._id)
+      );
+
+      setCartMessage("Product removed successfully");
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const removeWishlistItem = (id) => {
@@ -449,9 +444,9 @@ function Cart() {
                   </tr>
                 </thead>
                 <tbody>
-                  {cartWithDetails.length > 0 ? (
-                    cartWithDetails.map((item) => (
-                      <tr key={item.customId ?? item.id}>
+                  {cartItems.length > 0 ? (
+                    cartItems.map((item) => (
+                      <tr key={item._id}>
                         <td style={tdStyle}>
                           <div style={productCell}>
                             <img

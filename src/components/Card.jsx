@@ -121,7 +121,11 @@ function Card({ product }) {
             >
                 {product.image ? (
                     <img
-                       src={new URL(`../assets/${product.image}`, import.meta.url).href}
+                        src={
+                            product.image?.startsWith("http")
+                                ? product.image
+                                : new URL(`../assets/${product.image}`, import.meta.url).href
+                        }
                         alt={product.name}
                         style={{
                             maxWidth: "150px",

@@ -2,6 +2,20 @@ const express = require("express");
 const router = express.Router();
 const Product = require("../models/Product");
 
+const multer = require("multer");
+const path = require("path");
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/");
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({ storage });
+
 // GET all products
 router.get("/", async (req, res) => {
   try {
@@ -28,7 +42,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // POST add product
-router.post("/", async (req, res) => {
+router.post("/", upload.single("image"), async (req, res) => {
   try {
     const { name, price, description, stock } = req.body;
 
@@ -38,18 +52,32 @@ router.post("/", async (req, res) => {
       });
     }
 
-    if (price < 0 || stock < 0) {
+    if (Number(price) < 0 || Number(stock) < 0) {
       return res.status(400).json({
         message: "Price and stock must be positive numbers",
       });
     }
 
-    const product = new Product(req.body);
+    const imageUrl = req.file
+      ? `http://localhost:5000/uploads/${req.file.filename}`
+      : req.body.image;
+
+    const product = new Product({
+      ...req.body,
+      price: Number(price),
+      stock: Number(stock),
+      image: imageUrl,
+    });
+
     const savedProduct = await product.save();
 
     res.status(201).json(savedProduct);
   } catch (error) {
-    res.status(500).json({ message: "Failed to add product" });
+    console.log(error);
+    res.status(500).json({
+      message: "Failed to add product",
+      error: error.message
+    });
   }
 });
 
