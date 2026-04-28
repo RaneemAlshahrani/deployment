@@ -3,6 +3,7 @@ const cors = require("cors");
 require("dotenv").config();
 const mongoose = require("mongoose");
 const cartRoutes = require("./routes/cart");
+const customOptionRoutes = require("./routes/customOptions");
 
 const productRoutes = require("./routes/products");
 
@@ -14,6 +15,7 @@ app.use("/uploads", express.static("uploads"));
 
 app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
+app.use("/api/custom-options", customOptionRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend is working 🚀");

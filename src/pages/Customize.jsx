@@ -86,54 +86,32 @@ function Customize() {
         selectedIngredientsPrice;
 
     // Add customized product to cart
-    const handleAddToCart = () => {
-        if (!isValid) {
-            setAddedToCart(false);
-            return;
+    const handleAddToCart = async () => {
+        if (!isValid) return;
+
+        try {
+            await fetch("http://localhost:5000/api/cart", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    userId: "testUser",
+                    productId: "custom-soap", 
+                    quantity: 1,
+                    customOptions: {
+                        scents: selectedScents,
+                        texture: selectedTexture,
+                        ingredients: selectedIngredients,
+                    },
+                    customPrice: price,
+                }),
+            });
+
+            setAddedToCart(true);
+        } catch (err) {
+            console.error(err);
         }
-
-        if (!isLoggedIn) {
-            alert("Please login first");
-            return;
-        }
-
-        // Get cart from localStorage
-        const storedCart = JSON.parse(localStorage.getItem("cartItems")) || [];
-
-        const customOptions = {
-            scents: selectedScents,
-            texture: selectedTexture,
-            ingredients: selectedIngredients,
-        };
-
-        const existingItemIndex = storedCart.findIndex(
-            (item) =>
-                item.id === 4 &&
-                JSON.stringify(item.customOptions) === JSON.stringify(customOptions)
-        );
-
-        let updatedCart;
-
-        if (existingItemIndex !== -1) {
-            updatedCart = [...storedCart];
-            updatedCart[existingItemIndex] = {
-                ...updatedCart[existingItemIndex],
-                quantity: updatedCart[existingItemIndex].quantity + 1,
-            };
-        } else {
-            const customProduct = {
-                id: 4,
-                customId: Date.now().toString(),
-                quantity: 1,
-                customPrice: price,
-                customOptions,
-            };
-
-            updatedCart = [...storedCart, customProduct];
-        }
-
-        localStorage.setItem("cartItems", JSON.stringify(updatedCart));
-        setAddedToCart(true);
     };
 
     return (
