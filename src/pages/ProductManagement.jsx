@@ -62,6 +62,7 @@ function ProductManagement() {
     ingredients: "",
     stock: "",
     image: rose,
+    theme: "pink",
   });
 
   useEffect(() => {
@@ -112,6 +113,7 @@ function ProductManagement() {
       ingredients: product.ingredients,
       stock: product.stock,
       image: product.image,
+      theme: product.theme || "pink",
     });
     setFormError("");
     setSavedMessage("");
@@ -392,6 +394,45 @@ function ProductManagement() {
                     style={smallInputStyle}
                   />
                 </div>
+
+                <div style={fieldBoxStyle}>
+                  <label style={fieldLabelStyle}>Theme</label>
+                  <div style={fieldBoxStyle}>
+                    <label style={fieldLabelStyle}>Theme</label>
+
+                    <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+
+                      {["pink", "purple", "yellow"].map((color) => (
+                        <div
+                          key={color}
+                          onClick={() =>
+                            setFormData((prev) => ({ ...prev, theme: color }))
+                          }
+                          style={{
+                            width: "34px",
+                            height: "34px",
+                            borderRadius: "50%",
+                            cursor: "pointer",
+                            transition: "0.2s",
+
+                            background:
+                              color === "pink"
+                                ? "#f8b6c2"
+                                : color === "purple"
+                                  ? "#cbb7e6"
+                                  : "#f5e6a3",
+
+                            border:
+                              formData.theme === color
+                                ? "3px solid black"
+                                : "1px solid #ccc",
+                          }}
+                        />
+                      ))}
+
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div style={imagePanelStyle}>
@@ -570,6 +611,45 @@ function ProductManagement() {
                       onChange={handleChange}
                       style={smallInputStyle}
                     />
+                  </div>
+
+                  <div style={pinkFieldBoxStyle}>
+                    <label style={{ ...pinkFieldLabelStyle, color: editTheme.labelColor }}>
+                      Theme
+                    </label>
+
+                    <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+                      {["pink", "purple", "yellow"].map((color) => (
+                        <div
+                          key={color}
+                          onClick={() =>
+                            setFormData((prev) => ({ ...prev, theme: color }))
+                          }
+                          style={{
+                            width: "34px",
+                            height: "34px",
+                            borderRadius: "50%",
+                            cursor: "pointer",
+                            transition: "0.2s",
+
+                            background:
+                              color === "pink"
+                                ? "#f8b6c2"
+                                : color === "purple"
+                                  ? "#cbb7e6"
+                                  : "#f5e6a3",
+
+                            border:
+                              formData.theme === color
+                                ? "3px solid black"
+                                : "1px solid #ccc",
+
+                            transform:
+                              formData.theme === color ? "scale(1.1)" : "scale(1)",
+                          }}
+                        />
+                      ))}
+                    </div>
                   </div>
 
                   <div
