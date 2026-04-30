@@ -19,30 +19,9 @@ function Login() {
 
     if (!users || users.length === 0) {
       const defaultUsers = [
-        {
-          id: 1,
-          name: "Admin",
-          username: "admin",
-          password: "admin123",
-          role: "admin",
-          email: "admin@gmail.com",
-        },
-        {
-          id: 2,
-          name: "User",
-          username: "User",
-          password: "User123",
-          role: "user",
-          email: "user@gmail.com",
-        },
-        {
-          id: 3,
-          name: "customer service",
-          username: "customerservice",
-          password: "customer123",
-          role: "customer-service",
-          email: "customerservice@gmail.com",
-        },
+        { id: 1, username: "admin", password: "admin123", role: "admin" },
+        { id: 2, username: "user", password: "user123", role: "user" },
+        { id: 3, username: "customerservice", password: "customer123", role: "customer-service" },
       ];
 
       localStorage.setItem("users", JSON.stringify(defaultUsers));
@@ -96,12 +75,12 @@ function Login() {
         alignItems: "center",
         justifyContent: "center",
         padding: "24px",
-        boxSizing: "border-box",
       }}
     >
+      {/* Background */}
       <img
         src={bubble7}
-        alt="bubble"
+        alt=""
         style={{
           position: "absolute",
           top: "40px",
@@ -114,7 +93,7 @@ function Login() {
 
       <img
         src={bubble8}
-        alt="bubble"
+        alt=""
         style={{
           position: "absolute",
           bottom: "-40px",
@@ -125,45 +104,7 @@ function Login() {
         }}
       />
 
-      <div
-        style={{
-          position: "absolute",
-          top: "80px",
-          left: "70px",
-          width: "110px",
-          height: "110px",
-          borderRadius: "50%",
-          background: "rgba(255,255,255,0.18)",
-          opacity: 0.5,
-        }}
-      />
-
-      <div
-        style={{
-          position: "absolute",
-          top: "170px",
-          left: "40px",
-          width: "55px",
-          height: "55px",
-          borderRadius: "50%",
-          background: "rgba(255,255,255,0.12)",
-          opacity: 0.5,
-        }}
-      />
-
-      <div
-        style={{
-          position: "absolute",
-          top: "45px",
-          left: "360px",
-          width: "48px",
-          height: "48px",
-          borderRadius: "50%",
-          background: "rgba(255,255,255,0.18)",
-          border: "2px solid rgba(140,120,180,0.18)",
-        }}
-      />
-
+      {/* Card */}
       <div
         style={{
           width: "100%",
@@ -172,12 +113,8 @@ function Login() {
           border: "1px solid rgba(255,255,255,0.35)",
           borderRadius: "28px",
           backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
           padding: "38px 42px 28px",
           boxSizing: "border-box",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
-          position: "relative",
-          zIndex: 2,
         }}
       >
         <h1
@@ -191,68 +128,68 @@ function Login() {
           Login
         </h1>
 
-        <div style={{ marginBottom: "16px" }}>
-          <label style={labelStyle}>Username</label>
-          <input
-            type="text"
-            name="username"
-            placeholder="Username"
-            value={form.username}
-            onChange={handleChange}
-            style={inputStyle}
-          />
-        </div>
-
-        <div style={{ marginBottom: "10px" }}>
-          <label style={labelStyle}>Password</label>
-          <div style={{ position: "relative" }}>
-            <input
-              type={showPassword ? "text" : "password"}
-              name="password"
-              placeholder="Password"
-              value={form.password}
-              onChange={handleChange}
-              style={{ ...inputStyle, paddingRight: "40px" }}
-            />
-            <span
-              onClick={() => setShowPassword((prev) => !prev)}
-              style={eyeStyle}
-            >
-              {showPassword ? "🙈" : "👁"}
-            </span>
-          </div>
-        </div>
-
-        <p
-          style={{
-            margin: "0 0 10px",
-            fontSize: "11px",
-            color: "#4b5563",
-            cursor: "pointer",
-            width: "fit-content",
+        {/* ✅ FORM */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleLogin();
           }}
         >
-          Forgot Password?
-        </p>
+          {/* Username */}
+          <div style={{ marginBottom: "16px" }}>
+            <label style={labelStyle}>Username</label>
+            <input
+              type="text"
+              name="username"
+              placeholder="Username"
+              value={form.username}
+              onChange={handleChange}
+              style={inputStyle}
+            />
+          </div>
 
-        {error && (
-          <p
-            style={{
-              margin: "0 0 10px",
-              color: "#ff3d5a",
-              fontSize: "12px",
-              textAlign: "center",
-              fontWeight: "500",
-            }}
-          >
-            {error}
-          </p>
-        )}
+          {/* Password */}
+          <div style={{ marginBottom: "10px" }}>
+            <label style={labelStyle}>Password</label>
+            <div style={{ position: "relative" }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                placeholder="Password"
+                value={form.password}
+                onChange={handleChange}
+                style={{ ...inputStyle, paddingRight: "40px" }}
+              />
+              <span
+                onClick={() => setShowPassword((prev) => !prev)}
+                style={eyeStyle}
+              >
+                {showPassword ? "🙈" : "👁"}
+              </span>
+            </div>
+          </div>
 
-        <button onClick={handleLogin} style={mainButtonStyle}>
-          Log in
-        </button>
+          {/* Error */}
+          {error && (
+            <p
+              style={{
+                margin: "0 0 10px",
+                color: "#ff3d5a",
+                fontSize: "12px",
+                textAlign: "center",
+              }}
+            >
+              {error}
+            </p>
+          )}
 
+          {/* ✅ Submit */}
+          <button type="submit" style={mainButtonStyle}>
+            Log in
+          </button>
+        </form>
+
+        {/* Guest */}
         <button
           onClick={() => navigate("/home")}
           style={{
@@ -263,47 +200,27 @@ function Login() {
             border: "2px solid #bb5bb9",
             background: "rgba(255,255,255,0.4)",
             color: "#bb5bb9",
-            fontSize: "15px",
             fontWeight: "600",
-            cursor: "pointer"
+            cursor: "pointer",
           }}
         >
           Continue as Guest
         </button>
 
+        {/* Register */}
         <p
           style={{
             textAlign: "center",
-            margin: "18px 0 16px",
-            color: "#6b7280",
+            marginTop: "16px",
             fontSize: "12px",
           }}
         >
-          or continue with
-        </p>
-
-        <button style={googleButtonStyle}>
-          <span style={{ fontSize: "28px", lineHeight: 1 }}>G</span>
-        </button>
-
-        <p
-          style={{
-            margin: "16px 0 0",
-            textAlign: "center",
-            fontSize: "12px",
-            color: "#4b5563",
-          }}
-        >
-          Don&apos;t have an account yet?{" "}
+          Don’t have an account?{" "}
           <span
             onClick={() => navigate("/signin")}
-            style={{
-              cursor: "pointer",
-              fontWeight: "700",
-              color: "#2e3d4c",
-            }}
+            style={{ cursor: "pointer", fontWeight: "600" }}
           >
-            Register for free
+            Register
           </span>
         </p>
       </div>
@@ -336,7 +253,6 @@ const eyeStyle = {
   top: "50%",
   transform: "translateY(-50%)",
   cursor: "pointer",
-  fontSize: "14px",
 };
 
 const mainButtonStyle = {
@@ -349,17 +265,6 @@ const mainButtonStyle = {
   fontSize: "18px",
   fontWeight: "600",
   fontFamily: "Josefin Sans, sans-serif",
-  cursor: "pointer",
-};
-
-const googleButtonStyle = {
-  display: "block",
-  margin: "0 auto",
-  width: "92px",
-  height: "34px",
-  borderRadius: "8px",
-  border: "1px solid rgba(0,0,0,0.12)",
-  background: "white",
   cursor: "pointer",
 };
 

@@ -1,6 +1,11 @@
-// Reusable button component with different styles
-function Button({ text, variant = "primary", style, onClick, disabled = false }) {
-  // Button style variants
+function Button({ 
+  text, 
+  variant = "primary", 
+  style, 
+  onClick, 
+  disabled = false,
+  type = "button" 
+}) {
   const classes = {
     primary: "btn-primary",
     secondary: "btn-secondary",
@@ -8,9 +13,9 @@ function Button({ text, variant = "primary", style, onClick, disabled = false })
     purpleDisabled: "btn-purple-disabled",
   };
 
-  // Render button
   return (
     <button
+      type={type}  
       className={classes[variant]}
       style={style}
       onClick={onClick}
