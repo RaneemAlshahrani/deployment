@@ -8,93 +8,82 @@ import "../styles/ticketManagement.css";
 function TicketManagement() {
  const navigate = useNavigate();
 
- const [tickets, setTickets] = useState(() => {
-   const saved = localStorage.getItem("tickets");
+ // ✅ MongoDB
+ const [tickets, setTickets] = useState([]);
 
-   return saved
-     ? JSON.parse(saved)
-     : [
-         {
-           id: "#123",
-           customer: "Username",
-           email: "username123@gmail.com",
-           phone: "12312312312",
-           orderNumber: "#1024",
-           amount: "$6.00",
-           status: "Pending",
-           date: "14-02-2026",
-           issueType: "Refund",
-           refundEligibility: "Approve",
-           subject: "Refund",
-           message: "I want a refund",
-           orderItems: [
-             { name: "Rosemary Bliss", price: "$3.00", qty: 1, image: rosemary },
-             { name: "Sakura Bliss", price: "$3.00", qty: 1, image: rose },
-           ],
-         },
-       ];
- });
+ const loadTickets = async () => {
+  const data = await fetch("http://localhost:5000/api/tickets")
+    .then(res => res.json());
+  setTickets(data);
+ };
 
  useEffect(() => {
-   localStorage.setItem("tickets", JSON.stringify(tickets));
- }, [tickets]);
+  loadTickets();
+ }, []);
 
  const [filterStatus, setFilterStatus] = useState("All");
  const [ticketSearch, setTicketSearch] = useState("");
- const [selectedTicketId, setSelectedTicketId] = useState("#123");
+ const [selectedTicketId, setSelectedTicketId] = useState(null);
 
  const selectedTicket =
-   tickets.find((ticket) => ticket.id === selectedTicketId) || tickets[0];
+   tickets.find((ticket) => ticket._id === selectedTicketId) || tickets[0] || {};
 
- const [issueType, setIssueType] = useState(selectedTicket.issueType);
- const [refundEligibility, setRefundEligibility] = useState(
-   selectedTicket.refundEligibility
- );
- const [status, setStatus] = useState(selectedTicket.status);
+ const [issueType, setIssueType] = useState("");
+ const [refundEligibility, setRefundEligibility] = useState("");
+ const [status, setStatus] = useState("");
  const [note, setNote] = useState("");
  const [savedMessage, setSavedMessage] = useState("");
 
+ // ✅ لما تختارين تذكرة
+ useEffect(() => {
+  if (selectedTicket._id) {
+    setIssueType(selectedTicket.issueType || "");
+    setRefundEligibility(selectedTicket.refundEligibility || "");
+    setStatus(selectedTicket.status || "Pending");
+  }
+ }, [selectedTicket]);
+
+ // ✅ filter
  const filteredTickets = tickets.filter((ticket) => {
    const matchesStatus =
      filterStatus === "All" || ticket.status === filterStatus;
 
-   const matchesSearch = ticket.id
-     .toLowerCase()
+   const matchesSearch = ticket._id
+     ?.toLowerCase()
      .includes(ticketSearch.toLowerCase());
 
    return matchesStatus && matchesSearch;
  });
 
  const handleSelectTicket = (ticket) => {
-   setSelectedTicketId(ticket.id);
-   setIssueType(ticket.issueType);
-   setRefundEligibility(ticket.refundEligibility);
-   setStatus(ticket.status);
+   setSelectedTicketId(ticket._id);
    setNote("");
    setSavedMessage("");
  };
 
- const handleUpdate = () => {
-   if (!selectedTicket) return;
+ // ✅ UPDATE → MongoDB
+ const handleUpdate = async () => {
+   if (!selectedTicket?._id) return;
 
-   const updatedTickets = tickets.map((ticket) =>
-     ticket.id === selectedTicket.id
-       ? {
-           ...ticket,
-           issueType,
-           refundEligibility,
-           status,
-         }
-       : ticket
-   );
+   await fetch(`http://localhost:5000/api/tickets/${selectedTicket._id}`, {
+     method: "PUT",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify({
+       issueType,
+       refundEligibility,
+       status,
+     }),
+   });
 
-   setTickets(updatedTickets);
+   await loadTickets();
    setSavedMessage("Saved!");
  };
 
  return (
    <div className="purple-page ticket-page">
      <div className="ticket-layout">
+
+       {/* Sidebar */}
        <div className="cs-sidebar">
          <div className="cs-logo-card">
            <img src={logo} alt="Bubble Logo" />
@@ -111,7 +100,10 @@ function TicketManagement() {
          <button onClick={() => navigate("/")}>Log out</button>
        </div>
 
+       {/* Main */}
        <div className="ticket-main">
+
+         {/* Top panel */}
          <div className="ticket-top-panel">
            <div className="ticket-filter-row">
              <input
@@ -148,16 +140,16 @@ function TicketManagement() {
                {filteredTickets.length > 0 ? (
                  filteredTickets.map((ticket) => (
                    <tr
-                     key={ticket.id}
-                     className={selectedTicketId === ticket.id ? "selected" : ""}
+                     key={ticket._id}
+                     className={selectedTicketId === ticket._id ? "selected" : ""}
                      onClick={() => handleSelectTicket(ticket)}
                    >
-                     <td>{ticket.id}</td>
+                     <td>{ticket._id}</td>
                      <td>{ticket.orderNumber}</td>
                      <td>{ticket.customer}</td>
                      <td>{ticket.amount}</td>
                      <td>
-                       <span className={`ticket-status ${ticket.status.toLowerCase()}`}>
+                       <span className={`ticket-status ${ticket.status?.toLowerCase()}`}>
                          {ticket.status}
                        </span>
                      </td>
@@ -173,9 +165,10 @@ function TicketManagement() {
            </table>
          </div>
 
+         {/* Details */}
          <div className="ticket-details-panel">
            <div className="ticket-info-card">
-             <h2>Ticket {selectedTicket.id}</h2>
+             <h2>Ticket {selectedTicket?._id}</h2>
 
              <div className="ticket-info-table">
                <div className="ticket-info-item">
@@ -204,12 +197,12 @@ function TicketManagement() {
              <div className="ticket-message-card">
                <div className="ticket-field">
                  <label>Subject</label>
-                 <input type="text" value={selectedTicket.subject} readOnly />
+                 <input type="text" value={selectedTicket.subject || ""} readOnly />
                </div>
 
                <div className="ticket-field">
                  <label>Message</label>
-                 <textarea value={selectedTicket.message} readOnly rows={8} />
+                 <textarea value={selectedTicket.message || ""} readOnly rows={8} />
                </div>
              </div>
 
@@ -279,10 +272,10 @@ function TicketManagement() {
                </thead>
 
                <tbody>
-                 {selectedTicket.orderItems.map((item, index) => (
+                 {selectedTicket?.orderItems?.map((item, index) => (
                    <tr key={index}>
                      <td className="product-cell">
-                       <img src={item.image} alt={item.name} />
+                       <img src={item.image || rose} alt={item.name} />
                        {item.name}
                      </td>
                      <td>{item.price}</td>
@@ -293,6 +286,7 @@ function TicketManagement() {
                </tbody>
              </table>
            </div>
+
          </div>
        </div>
      </div>

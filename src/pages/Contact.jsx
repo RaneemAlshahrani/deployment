@@ -16,15 +16,14 @@ function Contact() {
 
  const [errors, setErrors] = useState({});
  const [successMessage, setSuccessMessage] = useState("");
-
+const [showAll, setShowAll] = useState(false);
  const [faqs, setFaqs] = useState([]);
 
- useEffect(() => {
-   const saved = localStorage.getItem("faqs");
-   if (saved) {
-     setFaqs(JSON.parse(saved));
-   }
- }, []);
+useEffect(() => {
+  fetch("http://localhost:5000/api/faqs")
+    .then(res => res.json())
+    .then(data => setFaqs(data));
+}, []);
 
  const isLoggedIn = true;
  const isMobile = window.innerWidth <= 768;
@@ -84,50 +83,49 @@ function Contact() {
    return newErrors;
  };
 
- const handleSubmit = () => {
-   const newErrors = validateForm();
-   setErrors(newErrors);
+const handleSubmit = async () => {
+  const newErrors = validateForm();
+  setErrors(newErrors);
 
-   if (Object.keys(newErrors).length > 0) {
-     setSuccessMessage("");
-     return;
-   }
+  if (Object.keys(newErrors).length > 0) {
+    setSuccessMessage("");
+    return;
+  }
 
-   const newTicket = {
-     id: "#" + Date.now(),
-     customer: form.fullName,
-     email: form.email,
-     phone: form.phone,
-     orderNumber: form.orderId || "N/A",
-     amount: "-",
-     status: "Pending",
-     date: new Date().toLocaleDateString(),
-     issueType: form.subject,
-     refundEligibility: "Pending",
-     subject: form.subject,
-     message: form.message,
-     orderItems: [],
-   };
+  const newTicket = {
+    customer: form.fullName,
+    email: form.email,
+    phone: form.phone,
+    orderNumber: form.orderId || "N/A",
+    amount: "-",
+    status: "Pending",
+    date: new Date().toLocaleDateString(),
+    issueType: form.subject,
+    refundEligibility: "Pending",
+    subject: form.subject,
+    message: form.message,
+    orderItems: [],
+  };
 
-   const existingTickets =
-     JSON.parse(localStorage.getItem("tickets")) || [];
+  await fetch("http://localhost:5000/api/tickets", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(newTicket),
+  });
 
-   const updatedTickets = [newTicket, ...existingTickets];
+  setSuccessMessage("Support ticket submitted successfully");
 
-   localStorage.setItem("tickets", JSON.stringify(updatedTickets));
-
-   setSuccessMessage("Support ticket submitted successfully");
-
-   setForm({
-     fullName: "",
-     orderId: "",
-     email: "",
-     phone: "",
-     subject: "",
-     message: "",
-   });
- };
-
+  // ✅ تفريغ الفورم
+  setForm({
+    fullName: "",
+    orderId: "",
+    email: "",
+    phone: "",
+    subject: "",
+    message: "",
+  });
+};
+const visibleFaqs = showAll ? faqs : faqs.slice(0, 5);
  return (
    <div className="purple-page" style={{ minHeight: "100vh" }}>
      <div
@@ -176,34 +174,54 @@ function Contact() {
            </h2>
 
            {faqs.length > 0 ? (
-             faqs.slice(0, 2).map((faq) => (
-               <div key={faq.id} style={{ marginBottom: "20px" }}>
-                 <p
-                   style={{
-                     margin: 0,
-                     fontSize: isMobile ? "16px" : "18px",
-                     fontWeight: "500",
-                     color: "#2f2f2f",
-                     lineHeight: 1.35,
-                   }}
-                 >
-                   {faq.question}
-                 </p>
-                 <p
-                   style={{
-                     marginTop: "6px",
-                     marginBottom: 0,
-                     fontSize: isMobile ? "14px" : "16px",
-                     color: "#666",
-                   }}
-                 >
-                   {faq.answer}
-                 </p>
-               </div>
-             ))
-           ) : (
-             <p>No FAQs available</p>
-           )}
+  <>
+    {visibleFaqs.map((faq) => (
+      <div key={faq._id} style={{ marginBottom: "20px" }}>
+        <p
+          style={{
+            margin: 0,
+            fontSize: isMobile ? "16px" : "18px",
+            fontWeight: "500",
+            color: "#2f2f2f",
+            lineHeight: 1.35,
+          }}
+        >
+          {faq.question}
+        </p>
+
+        <p
+          style={{
+            marginTop: "6px",
+            marginBottom: 0,
+            fontSize: isMobile ? "14px" : "16px",
+            color: "#666",
+          }}
+        >
+          {faq.answer}
+        </p>
+      </div>
+    ))}
+
+    {/* ✅ Show More button */}
+    {faqs.length > 5 && (
+      <button
+        onClick={() => setShowAll(!showAll)}
+        style={{
+          marginTop: "10px",
+          background: "transparent",
+          border: "none",
+          color: "#7c3aed",
+          cursor: "pointer",
+          fontWeight: "500",
+        }}
+      >
+        {showAll ? "Show Less" : "Show More"}
+      </button>
+    )}
+  </>
+            ) : (
+              <p>No FAQs available</p>
+            )}
          </div>
 
          <div

@@ -6,21 +6,18 @@ import "../styles/faqTemplates.css";
 function FAQTemplates() {
  const navigate = useNavigate();
 
- // ✅ load from localStorage
- const [faqs, setFaqs] = useState(() => {
-   const saved = localStorage.getItem("faqs");
-   return saved
-     ? JSON.parse(saved)
-     : [
-         { id: 1, question: "How to get a refund?", answer: "Contact us" },
-         { id: 2, question: "My order is wrong, what to do?", answer: "Contact us" },
-       ];
- });
+const [faqs, setFaqs] = useState([]);
+const [showAll, setShowAll] = useState(false);
 
- // ✅ save to localStorage
- useEffect(() => {
-   localStorage.setItem("faqs", JSON.stringify(faqs));
- }, [faqs]);
+const loadFaqs = async () => {
+  const data = await fetch("http://localhost:5000/api/faqs")
+    .then(res => res.json());
+  setFaqs(data);
+};
+
+useEffect(() => {
+  loadFaqs();
+}, []);
 
  const [selectedFaqId, setSelectedFaqId] = useState(null);
  const [form, setForm] = useState({ question: "", answer: "" });
@@ -34,7 +31,7 @@ function FAQTemplates() {
    !form.question.trim() || !form.answer.trim();
 
  const handleEdit = (faq) => {
-   setSelectedFaqId(faq.id);
+   setSelectedFaqId(faq._id);
    setForm({
      question: faq.question,
      answer: faq.answer,
@@ -44,16 +41,13 @@ function FAQTemplates() {
    setMessage("");
  };
 
- const handleDelete = (id) => {
-   const updatedFaqs = faqs.filter((faq) => faq.id !== id);
-   setFaqs(updatedFaqs);
+const handleDelete = async (id) => {
+  await fetch(`http://localhost:5000/api/faqs/${id}`, {
+    method: "DELETE",
+  });
 
-   setMessage("Deleted!");
-
-   setTimeout(() => {
-     setMessage("");
-   }, 800);
- };
+  await loadFaqs();
+};
 
  const handleAddNew = () => {
    setSelectedFaqId(null);
@@ -63,45 +57,35 @@ function FAQTemplates() {
    setMessage("");
  };
 
- const handleSaveEdit = () => {
-   if (isFormInvalid || !selectedFaqId) return;
+const handleSaveEdit = async () => {
+  if (isFormInvalid || !selectedFaqId) return;
 
-   const updatedFaqs = faqs.map((faq) =>
-     faq.id === selectedFaqId
-       ? { ...faq, question: form.question, answer: form.answer }
-       : faq
-   );
+  await fetch(`http://localhost:5000/api/faqs/${selectedFaqId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(form),
+  });
 
-   setFaqs(updatedFaqs);
-   setMessage("Saved!");
+  await loadFaqs();
+  setForm({ question: "", answer: "" }); 
+  setShowEditForm(false); 
+  setSelectedFaqId(null); 
+};
 
-   setTimeout(() => {
-     setShowEditForm(false);
-     setSelectedFaqId(null);
-     setForm({ question: "", answer: "" });
-     setMessage("");
-   }, 800);
- };
+ const handleAdd = async () => {
+  if (isFormInvalid) return;
 
- const handleAdd = () => {
-   if (isFormInvalid) return;
+  await fetch("http://localhost:5000/api/faqs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(form),
+  });
 
-   const newFaq = {
-     id: Date.now(),
-     question: form.question,
-     answer: form.answer,
-   };
-
-   setFaqs([...faqs, newFaq]);
-   setMessage("Added!");
-
-   setTimeout(() => {
-     setShowAddForm(false);
-     setForm({ question: "", answer: "" });
-     setMessage("");
-   }, 800);
- };
-
+  await loadFaqs();
+  setForm({ question: "", answer: "" }); 
+setShowAddForm(false); 
+};
+const visibleFaqs = showAll ? faqs : faqs.slice(0, 5);
  return (
    <div className="purple-page faq-page">
      <div className="faq-layout">
@@ -135,8 +119,8 @@ function FAQTemplates() {
            <h2>FAQs</h2>
 
            <div className="faq-list">
-             {faqs.map((faq) => (
-               <div key={faq.id} className="faq-list-item">
+             {visibleFaqs.map((faq) => (
+               <div key={faq._id} className="faq-list-item">
                  <div className="faq-list-text">
                    <p className="faq-question">{faq.question}</p>
                    <p className="faq-answer-preview">{faq.answer}</p>
@@ -158,7 +142,7 @@ function FAQTemplates() {
                            "Are you sure you want to delete this FAQ?"
                          )
                        ) {
-                         handleDelete(faq.id);
+                         handleDelete(faq._id);
                        }
                      }}
                    >
@@ -167,6 +151,21 @@ function FAQTemplates() {
                  </div>
                </div>
              ))}
+             {faqs.length > 5 && (
+              <button
+                onClick={() => setShowAll(!showAll)}
+                style={{
+                  marginTop: "10px",
+                  background: "transparent",
+                  border: "none",
+                  color: "#7c3aed",
+                  cursor: "pointer",
+                  fontWeight: "500",
+                }}
+              >
+                {showAll ? "Show Less" : "View More"}
+              </button>
+            )}
            </div>
 
            <div className="faq-add-row">

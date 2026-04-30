@@ -5,7 +5,13 @@ const mongoose = require("mongoose");
 const cartRoutes = require("./routes/cart");
 const customOptionRoutes = require("./routes/customOptions");
 
-const productRoutes = require("./routes/products");
+app.use("/api/products", productRoutes);
+
+app.use("/api/faqs", faqRoutes);
+app.use("/api/tickets", ticketRoutes);
+
+app.use("/api/cart", cartRoutes);
+app.use("/api/custom-options", customOptionRoutes);
 
 const app = express(); 
 
@@ -14,8 +20,6 @@ app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
 app.use("/api/products", productRoutes);
-app.use("/api/cart", cartRoutes);
-app.use("/api/custom-options", customOptionRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend is working 🚀");
