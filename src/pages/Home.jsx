@@ -1,6 +1,5 @@
 import Navbar from "../components/Navbar";
 import Button from "../components/Button";
-import rose from "../assets/rose.png";
 import bubble7 from "../assets/bubble7.png";
 import bubble8 from "../assets/bubble8.png";
 import heart from "../assets/heart.png";
@@ -14,16 +13,22 @@ function Home() {
   const currentUser = JSON.parse(localStorage.getItem("currentUser"));
   const isLoggedIn = !!currentUser;
 
-  const product = {
-    id: 1,
-    name: "Sakura Bliss",
-  };
-
+  const [product, setProduct] = useState(null);
   const [liked, setLiked] = useState(false);
   const [cartMessage, setCartMessage] = useState("");
 
   useEffect(() => {
-    if (!isLoggedIn) {
+    fetch("http://localhost:5000/api/products")
+      .then((res) => res.json())
+      .then((data) => {
+        const normalProducts = data.filter((item) => !item.isCustomizable);
+        setProduct(normalProducts[0]);
+      })
+      .catch((err) => console.log(err));
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn || !product) {
       setLiked(false);
       return;
     }
@@ -31,9 +36,9 @@ function Home() {
     const storedWishlist =
       JSON.parse(localStorage.getItem("wishlistItems")) || [];
 
-    const isLiked = storedWishlist.some((item) => item.id === product.id);
+    const isLiked = storedWishlist.some((item) => item.id === product._id);
     setLiked(isLiked);
-  }, [isLoggedIn, product.id]);
+  }, [isLoggedIn, product]);
 
   const handleWishlist = () => {
     if (!isLoggedIn) {
@@ -41,17 +46,19 @@ function Home() {
       return;
     }
 
+    if (!product) return;
+
     let storedWishlist =
       JSON.parse(localStorage.getItem("wishlistItems")) || [];
 
-    const exists = storedWishlist.find((item) => item.id === product.id);
+    const exists = storedWishlist.find((item) => item.id === product._id);
 
     if (exists) {
-      storedWishlist = storedWishlist.filter((item) => item.id !== product.id);
+      storedWishlist = storedWishlist.filter((item) => item.id !== product._id);
       setLiked(false);
     } else {
       storedWishlist.push({
-        id: product.id,
+        id: product._id,
         quantity: 1,
       });
       setLiked(true);
@@ -66,22 +73,21 @@ function Home() {
       return;
     }
 
-    let storedCart =
-      JSON.parse(localStorage.getItem("cartItems")) || [];
+    if (!product) return;
 
-    const existingItem = storedCart.find(
-      (item) => item.id === product.id
-    );
+    let storedCart = JSON.parse(localStorage.getItem("cartItems")) || [];
+
+    const existingItem = storedCart.find((item) => item.id === product._id);
 
     if (existingItem) {
       storedCart = storedCart.map((item) =>
-        item.id === product.id
+        item.id === product._id
           ? { ...item, quantity: item.quantity + 1 }
           : item
       );
     } else {
       storedCart.push({
-        id: product.id,
+        id: product._id,
         quantity: 1,
       });
     }
@@ -101,7 +107,9 @@ function Home() {
       return;
     }
 
-    navigate("/product-details/1");
+    if (!product) return;
+
+    navigate(`/product-details/${product._id}`);
   };
 
   return (
@@ -156,17 +164,19 @@ function Home() {
           zIndex: 2,
         }}
       >
-        <img
-          src={rose}
-          alt="Bubble Soap"
-          style={{
-            width: "560px",
-            maxWidth: "100%",
-            filter: "drop-shadow(0px 20px 40px rgba(0,0,0,0.18))",
-            marginBottom: "10px",
-            pointerEvents: "none",
-          }}
-        />
+        {product && (
+          <img
+            src={product.image}
+            alt={product.name}
+            style={{
+              width: "560px",
+              maxWidth: "100%",
+              filter: "drop-shadow(0px 20px 40px rgba(0,0,0,0.18))",
+              marginBottom: "10px",
+              pointerEvents: "none",
+            }}
+          />
+        )}
 
         <div
           style={{
