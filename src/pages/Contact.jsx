@@ -16,7 +16,7 @@ function Contact() {
 
  const [errors, setErrors] = useState({});
  const [successMessage, setSuccessMessage] = useState("");
-
+const [showAll, setShowAll] = useState(false);
  const [faqs, setFaqs] = useState([]);
 
 useEffect(() => {
@@ -125,7 +125,7 @@ const handleSubmit = async () => {
     message: "",
   });
 };
-
+const visibleFaqs = showAll ? faqs : faqs.slice(0, 5);
  return (
    <div className="purple-page" style={{ minHeight: "100vh" }}>
      <div
@@ -174,34 +174,54 @@ const handleSubmit = async () => {
            </h2>
 
            {faqs.length > 0 ? (
-             faqs.slice(0, 2).map((faq) => (
-               <div key={faq._id} style={{ marginBottom: "20px" }}>
-                 <p
-                   style={{
-                     margin: 0,
-                     fontSize: isMobile ? "16px" : "18px",
-                     fontWeight: "500",
-                     color: "#2f2f2f",
-                     lineHeight: 1.35,
-                   }}
-                 >
-                   {faq.question}
-                 </p>
-                 <p
-                   style={{
-                     marginTop: "6px",
-                     marginBottom: 0,
-                     fontSize: isMobile ? "14px" : "16px",
-                     color: "#666",
-                   }}
-                 >
-                   {faq.answer}
-                 </p>
-               </div>
-             ))
-           ) : (
-             <p>No FAQs available</p>
-           )}
+  <>
+    {visibleFaqs.map((faq) => (
+      <div key={faq._id} style={{ marginBottom: "20px" }}>
+        <p
+          style={{
+            margin: 0,
+            fontSize: isMobile ? "16px" : "18px",
+            fontWeight: "500",
+            color: "#2f2f2f",
+            lineHeight: 1.35,
+          }}
+        >
+          {faq.question}
+        </p>
+
+        <p
+          style={{
+            marginTop: "6px",
+            marginBottom: 0,
+            fontSize: isMobile ? "14px" : "16px",
+            color: "#666",
+          }}
+        >
+          {faq.answer}
+        </p>
+      </div>
+    ))}
+
+    {/* ✅ Show More button */}
+    {faqs.length > 5 && (
+      <button
+        onClick={() => setShowAll(!showAll)}
+        style={{
+          marginTop: "10px",
+          background: "transparent",
+          border: "none",
+          color: "#7c3aed",
+          cursor: "pointer",
+          fontWeight: "500",
+        }}
+      >
+        {showAll ? "Show Less" : "Show More"}
+      </button>
+    )}
+  </>
+            ) : (
+              <p>No FAQs available</p>
+            )}
          </div>
 
          <div

@@ -7,6 +7,7 @@ function FAQTemplates() {
  const navigate = useNavigate();
 
 const [faqs, setFaqs] = useState([]);
+const [showAll, setShowAll] = useState(false);
 
 const loadFaqs = async () => {
   const data = await fetch("http://localhost:5000/api/faqs")
@@ -84,6 +85,7 @@ const handleSaveEdit = async () => {
   setForm({ question: "", answer: "" }); 
 setShowAddForm(false); 
 };
+const visibleFaqs = showAll ? faqs : faqs.slice(0, 5);
  return (
    <div className="purple-page faq-page">
      <div className="faq-layout">
@@ -117,7 +119,7 @@ setShowAddForm(false);
            <h2>FAQs</h2>
 
            <div className="faq-list">
-             {faqs.map((faq) => (
+             {visibleFaqs.map((faq) => (
                <div key={faq._id} className="faq-list-item">
                  <div className="faq-list-text">
                    <p className="faq-question">{faq.question}</p>
@@ -149,6 +151,21 @@ setShowAddForm(false);
                  </div>
                </div>
              ))}
+             {faqs.length > 5 && (
+              <button
+                onClick={() => setShowAll(!showAll)}
+                style={{
+                  marginTop: "10px",
+                  background: "transparent",
+                  border: "none",
+                  color: "#7c3aed",
+                  cursor: "pointer",
+                  fontWeight: "500",
+                }}
+              >
+                {showAll ? "Show Less" : "View More"}
+              </button>
+            )}
            </div>
 
            <div className="faq-add-row">

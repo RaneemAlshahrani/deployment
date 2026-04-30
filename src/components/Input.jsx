@@ -25,7 +25,7 @@ function Input({
 
   // Render input or textarea
   return (
-    <div style={{ width: "100%" }}>
+    <div style={{ width: "100%", marginBottom: "20px" }}>
       <label
         style={{
           display: "block",
