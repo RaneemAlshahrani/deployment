@@ -2,17 +2,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import Input from "../components/Input";
 import Button from "../components/Button";
 import defaultProfileImage from "../assets/Profile .png";
 import billingCard from "../assets/Card.png";
-import { getCurrentUser, getAuthToken, updateUserProfile } from "../services/api";
+import { getCurrentUser, getAuthToken } from "../services/api";
 
 function Profile() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   
-  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -40,7 +38,6 @@ function Profile() {
       }
       
       try {
-        // Fetch user profile from backend
         const response = await fetch(`http://localhost:5000/api/auth/profile`, {
           headers: {
             "Authorization": `Bearer ${token}`
@@ -49,7 +46,6 @@ function Profile() {
         
         if (response.ok) {
           const userData = await response.json();
-          setUser(userData.user);
           setFormData({
             fullName: userData.user.fullName || "",
             email: userData.user.email || "",
@@ -57,8 +53,6 @@ function Profile() {
             address: userData.user.address || "",
           });
         } else {
-          // Fallback to stored user data
-          setUser(currentUser);
           setFormData({
             fullName: currentUser.fullName || "",
             email: currentUser.email || "",
@@ -68,8 +62,6 @@ function Profile() {
         }
       } catch (error) {
         console.error("Error fetching user:", error);
-        // Fallback to stored user data
-        setUser(currentUser);
         setFormData({
           fullName: currentUser.fullName || "",
           email: currentUser.email || "",
@@ -91,7 +83,7 @@ function Profile() {
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) return dateString;
+    if (isNaN(date.getTime())) return dateString;
     return date.toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "short",
@@ -101,6 +93,7 @@ function Profile() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -114,16 +107,9 @@ function Profile() {
 
   const validateForm = () => {
     const newErrors = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!formData.fullName.trim()) {
       newErrors.fullName = "Full name is required";
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = "Invalid email format";
     }
 
     if (formData.phone && !/^\d+$/.test(formData.phone)) {
@@ -149,23 +135,32 @@ function Profile() {
     }
 
     try {
+      const updateData = {
+        fullName: formData.fullName,
+        phone: formData.phone,
+        address: formData.address,
+      };
+
       const response = await fetch("http://localhost:5000/api/auth/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(updateData)
       });
 
       if (response.ok) {
         const updatedUser = await response.json();
-        setUser(updatedUser.user);
-        // Update localStorage
-        localStorage.setItem("user", JSON.stringify(updatedUser.user));
+        const localUser = getCurrentUser();
+        if (localUser) {
+          localUser.fullName = updatedUser.user.fullName;
+          localUser.phone = updatedUser.user.phone;
+          localUser.address = updatedUser.user.address;
+          localStorage.setItem("user", JSON.stringify(localUser));
+        }
         setSavedMessage("Profile updated successfully!");
         
-        // Clear success message after 3 seconds
         setTimeout(() => setSavedMessage(""), 3000);
       } else {
         const error = await response.json();
@@ -270,7 +265,6 @@ function Profile() {
         </div>
 
         <div
-          className="profile-main-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "260px 1fr",
@@ -431,44 +425,118 @@ function Profile() {
               </h1>
 
               <div
-                className="profile-form-grid"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
                   gap: "20px 28px",
                 }}
               >
-                <Input
-                  label="Full Name"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  error={errors.fullName}
-                />
+                {/* Full Name */}
+                <div>
+                  <label style={{ display: "block", marginBottom: "8px", color: "#444", fontSize: "15px" }}>
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleChange}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      borderRadius: "10px",
+                      border: "1px solid #b9b9b9",
+                      outline: "none",
+                      fontSize: "14px",
+                      fontFamily: "Josefin Sans, sans-serif",
+                      boxSizing: "border-box",
+                      background: "white",
+                    }}
+                  />
+                  {errors.fullName && (
+                    <p style={{ color: "#ff5a45", fontSize: "12px", marginTop: "6px" }}>
+                      {errors.fullName}
+                    </p>
+                  )}
+                </div>
 
-                <Input
-                  label="Email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  error={errors.email}
-                />
+                {/* Email - Display as Text */}
+                <div>
+                  <label style={{ display: "block", marginBottom: "8px", color: "#444", fontSize: "15px" }}>
+                    Email
+                  </label>
+                  <div
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      borderRadius: "10px",
+                      border: "1px solid #e0e0e0",
+                      backgroundColor: "#f5f5f5",
+                      fontSize: "14px",
+                      fontFamily: "Josefin Sans, sans-serif",
+                      boxSizing: "border-box",
+                      color: "#333",
+                      cursor: "not-allowed",
+                      wordBreak: "break-all",
+                      overflowWrap: "break-word",
+                    }}
+                  >
+                    {formData.email || "No email set"}
+                  </div>
+                </div>
 
-                <Input
-                  label="Phone Number"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  error={errors.phone}
-                />
+                {/* Phone */}
+                <div>
+                  <label style={{ display: "block", marginBottom: "8px", color: "#444", fontSize: "15px" }}>
+                    Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      borderRadius: "10px",
+                      border: "1px solid #b9b9b9",
+                      outline: "none",
+                      fontSize: "14px",
+                      fontFamily: "Josefin Sans, sans-serif",
+                      boxSizing: "border-box",
+                      background: "white",
+                    }}
+                  />
+                  {errors.phone && (
+                    <p style={{ color: "#ff5a45", fontSize: "12px", marginTop: "6px" }}>
+                      {errors.phone}
+                    </p>
+                  )}
+                </div>
 
-                <Input
-                  label="Address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                />
+                {/* Address */}
+                <div>
+                  <label style={{ display: "block", marginBottom: "8px", color: "#444", fontSize: "15px" }}>
+                    Address
+                  </label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      borderRadius: "10px",
+                      border: "1px solid #b9b9b9",
+                      outline: "none",
+                      fontSize: "14px",
+                      fontFamily: "Josefin Sans, sans-serif",
+                      boxSizing: "border-box",
+                      background: "white",
+                    }}
+                  />
+                </div>
               </div>
 
               <div
@@ -502,7 +570,6 @@ function Profile() {
 
             {/* Orders Section */}
             <div
-              className="profile-bottom-grid"
               style={{
                 display: "grid",
                 gridTemplateColumns: "1.5fr 0.9fr",
@@ -553,65 +620,35 @@ function Profile() {
                           textAlign: "left",
                         }}
                       >
-                        <th style={{ padding: "14px 10px", fontSize: "14px" }}>
-                          Order ID.
-                        </th>
-                        <th style={{ padding: "14px 10px", fontSize: "14px" }}>
-                          Date
-                        </th>
-                        <th style={{ padding: "14px 10px", fontSize: "14px" }}>
-                          Item
-                        </th>
-                        <th style={{ padding: "14px 10px", fontSize: "14px" }}>
-                          Total
-                        </th>
-                        <th style={{ padding: "14px 10px", fontSize: "14px" }}>
-                          Status
-                        </th>
+                        <th style={{ padding: "14px 10px", fontSize: "14px" }}>Order ID</th>
+                        <th style={{ padding: "14px 10px", fontSize: "14px" }}>Date</th>
+                        <th style={{ padding: "14px 10px", fontSize: "14px" }}>Item</th>
+                        <th style={{ padding: "14px 10px", fontSize: "14px" }}>Total</th>
+                        <th style={{ padding: "14px 10px", fontSize: "14px" }}>Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {orders.length > 0 ? (
-                        orders.map((order, index) => {
-                          const itemNames =
-                            order.items && order.items.length > 0
-                              ? order.items.map((item) => item.item).join(", ")
-                              : order.item || order.name || "Unknown Item";
+                        orders.slice(0, 3).map((order, index) => {
+                          const itemNames = order.items && order.items.length > 0
+                            ? order.items.map((item) => item.item).join(", ")
+                            : order.item || order.name || "Unknown Item";
 
                           return (
-                            <tr
-                              key={order.id || index}
-                              style={{
-                                borderTop: "1px solid rgba(255,255,255,0.35)",
-                              }}
-                            >
-                              <td style={{ padding: "18px 10px", color: "#374151" }}>
-                                {order.id || `#${1000 + index}`}
-                              </td>
-
-                              <td style={{ padding: "18px 10px", color: "#374151" }}>
-                                {formatDate(order.date)}
-                              </td>
-
-                              <td style={{ padding: "18px 10px", color: "#374151" }}>
-                                {itemNames}
-                              </td>
-
-                              <td style={{ padding: "18px 10px", color: "#374151" }}>
-                                ${(order.total || order.subtotal || 0).toFixed(2)}
-                              </td>
-
+                            <tr key={order.id || index} style={{ borderTop: "1px solid rgba(255,255,255,0.35)" }}>
+                              <td style={{ padding: "18px 10px", color: "#374151" }}>{order.id || `#${1000 + index}`}</td>
+                              <td style={{ padding: "18px 10px", color: "#374151" }}>{formatDate(order.date)}</td>
+                              <td style={{ padding: "18px 10px", color: "#374151" }}>{itemNames}</td>
+                              <td style={{ padding: "18px 10px", color: "#374151" }}>${(order.total || order.subtotal || 0).toFixed(2)}</td>
                               <td style={{ padding: "18px 10px" }}>
-                                <span
-                                  style={{
-                                    background: "#b99af1",
-                                    color: "#5b2fb2",
-                                    padding: "6px 12px",
-                                    borderRadius: "10px",
-                                    fontSize: "12px",
-                                    fontWeight: "600",
-                                  }}
-                                >
+                                <span style={{
+                                  background: "#b99af1",
+                                  color: "#5b2fb2",
+                                  padding: "6px 12px",
+                                  borderRadius: "10px",
+                                  fontSize: "12px",
+                                  fontWeight: "600",
+                                }}>
                                   {order.status || "Pending"}
                                 </span>
                               </td>
@@ -620,14 +657,7 @@ function Profile() {
                         })
                       ) : (
                         <tr>
-                          <td
-                            colSpan="5"
-                            style={{
-                              padding: "24px 10px",
-                              textAlign: "center",
-                              color: "#4b5563",
-                            }}
-                          >
+                          <td colSpan="5" style={{ padding: "24px 10px", textAlign: "center", color: "#4b5563" }}>
                             No orders found.
                           </td>
                         </tr>
@@ -638,7 +668,7 @@ function Profile() {
 
                 <div style={{ marginTop: "16px" }}>
                   <Button
-                    text="My Orders"
+                    text="View All Orders"
                     variant="secondary"
                     onClick={() => navigate("/order-history")}
                   />

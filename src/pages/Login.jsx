@@ -1,3 +1,4 @@
+// src/pages/Login.jsx
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { signin, saveUser, setAuthToken } from "../services/api";
@@ -17,7 +18,7 @@ const Login = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
-    setError(""); // Clear error when user types
+    setError("");
   };
 
   const handleSubmit = async (e) => {
@@ -28,11 +29,9 @@ const Login = () => {
     try {
       const data = await signin(formData.email, formData.password);
       
-      // Save token and user data
       setAuthToken(data.token);
       saveUser(data.user);
       
-      // Redirect based on role
       if (data.user.role === "admin") {
         navigate("/admin-dashboard");
       } else if (data.user.role === "customer-service") {

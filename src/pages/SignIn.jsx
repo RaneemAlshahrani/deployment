@@ -1,3 +1,4 @@
+// src/pages/SignIn.jsx
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { signup, saveUser, setAuthToken } from "../services/api";
@@ -24,12 +25,34 @@ const SignIn = () => {
     setError("");
   };
 
+  // Simple email validation that accepts dots
+  const isValidEmail = (email) => {
+    // Basic check: must contain @ and something after
+    const atIndex = email.indexOf('@');
+    if (atIndex === -1) return false;
+    
+    const localPart = email.substring(0, atIndex);
+    const domainPart = email.substring(atIndex + 1);
+    
+    // Local part can have letters, numbers, dots, underscores, etc.
+    // Domain must have at least one dot
+    return localPart.length > 0 && 
+           domainPart.length > 0 && 
+           domainPart.includes('.');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Check if passwords match
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
+      return;
+    }
+    
+    // Validate email format
+    if (!isValidEmail(formData.email)) {
+      setError("Please enter a valid email address (e.g., name@example.com or name.last@example.com)");
       return;
     }
     
@@ -40,12 +63,16 @@ const SignIn = () => {
       const { confirmPassword, ...userData } = formData;
       const data = await signup(userData);
       
-      // Save token and user data
       setAuthToken(data.token);
       saveUser(data.user);
       
-      // Redirect to home
-      navigate("/home");
+      if (data.user.role === "admin") {
+        navigate("/admin-dashboard");
+      } else if (data.user.role === "customer-service") {
+        navigate("/customer-service/tickets");
+      } else {
+        navigate("/home");
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -84,8 +111,11 @@ const SignIn = () => {
               value={formData.email}
               onChange={handleChange}
               required
-              placeholder="Enter your email"
+              placeholder="Enter your email (e.g., john.doe@example.com)"
             />
+            <small style={{ color: "#666", fontSize: "12px", display: "block", marginTop: "5px" }}>
+              ✓ Dots (.) are allowed in email addresses (e.g., john.doe@example.com)
+            </small>
           </div>
           
           <div className="form-group">

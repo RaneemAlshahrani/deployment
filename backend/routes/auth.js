@@ -13,8 +13,15 @@ const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_key_change_this";
 router.post(
   "/signup",
   [
-    body("fullName").notEmpty().withMessage("Full name is required"),
-    body("email").isEmail().withMessage("Please enter a valid email"),
+    body("fullName")
+      .notEmpty()
+      .withMessage("Full name is required")
+      .isLength({ min: 2 })
+      .withMessage("Full name must be at least 2 characters"),
+    body("email")
+      .isEmail()
+      .withMessage("Please enter a valid email")
+      .normalizeEmail(),
     body("password")
       .isLength({ min: 6 })
       .withMessage("Password must be at least 6 characters"),
@@ -96,7 +103,9 @@ router.post(
 router.post(
   "/signin",
   [
-    body("email").isEmail().withMessage("Please enter a valid email"),
+   body("email")
+  .isEmail()
+  .withMessage("Please enter a valid email address"),
     body("password").notEmpty().withMessage("Password is required"),
   ],
   async (req, res) => {
