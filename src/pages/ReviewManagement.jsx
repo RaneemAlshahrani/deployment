@@ -1,81 +1,104 @@
-import { useState } from "react";
-import rose from "../assets/rose.png";
-import lavender from "../assets/lavender.png";
-import rosemary from "../assets/rosemary.png";
-import soap from "../assets/soap-bliss.png";
+import { useEffect, useState } from "react";
 import userProfile from "../assets/profile-picture.png";
 import AdminSidebar from "../components/AdminSidebar";
 import "../styles/reviewManagement.css";
 
 function ReviewManagement() {
-  const products = [
-    { id: 1, name: "Sakura Bliss", image: rose },
-    { id: 2, name: "Lavender Bliss", image: lavender },
-    { id: 3, name: "Rosemary Bliss", image: rosemary },
-    { id: 4, name: "Soap Bliss", image: soap },
-  ];
+  const [reviews, setReviews] = useState([]);
+  const [selectedProductId, setSelectedProductId] = useState(null);
 
-  const [reviewsData, setReviewsData] = useState({
-    1: [
-      { user: "Lana", text: "Amazing soap, I really loved the smell." },
-      { user: "Sara", text: "Very soft on the skin and looks beautiful." },
-      { user: "Nora", text: "Would definitely buy it again." },
-    ],
-    2: [
-      { user: "Maha", text: "The lavender scent is very relaxing." },
-      { user: "Reem", text: "Good product for daily use." },
-      { user: "Huda", text: "I liked it, but I wish the scent lasted longer." },
-    ],
-    3: [
-      { user: "Raghad", text: "Very refreshing and unique." },
-      { user: "Noor", text: "The rosemary smell feels natural and clean." },
-      { user: "Abeer", text: "One of my favorite products." },
-    ],
-    4: [
-      { user: "Dalal", text: "Simple and cute customizable soap." },
-      { user: "Jawaher", text: "Nice idea for gifts." },
-      { user: "Abrar", text: "I enjoyed choosing my own ingredients." },
-    ],
-  });
-
-  const [selectedProduct, setSelectedProduct] = useState(products[0]);
-
-  // --- Modal States ---
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [reviewToDelete, setReviewToDelete] = useState(null);
 
-  const triggerDelete = (productId, reviewIndex) => {
-    setReviewToDelete({ productId, reviewIndex });
+  // ✅ FETCH REVIEWS FROM BACKEND
+  useEffect(() => {
+    fetchReviews();
+  }, []);
+
+  const fetchReviews = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/admin/reviews");
+      const data = await res.json();
+
+      setReviews(data);
+
+      // set first product automatically
+      if (data.length > 0) {
+        setSelectedProductId(data[0].productId?._id);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // ✅ GET UNIQUE PRODUCTS FROM REVIEWS
+  const products = [
+    ...new Map(
+      reviews.map((r) => [
+        r.productId?._id,
+        {
+          id: r.productId?._id,
+          name: r.productId?.name,
+          image: r.productId?.image,
+        },
+      ])
+    ).values(),
+  ];
+
+  // ✅ FILTER REVIEWS FOR SELECTED PRODUCT
+  const selectedReviews = reviews.filter(
+    (r) => r.productId?._id === selectedProductId
+  );
+
+  const selectedProduct = products.find(
+    (p) => p.id === selectedProductId
+  );
+
+  // ✅ DELETE FLOW
+  const triggerDelete = (reviewId) => {
+    setReviewToDelete(reviewId);
     setShowDeleteModal(true);
   };
 
-  const confirmDelete = () => {
-    if (reviewToDelete) {
-      const { productId, reviewIndex } = reviewToDelete;
-      setReviewsData((prev) => ({
-        ...prev,
-        [productId]: prev[productId].filter((_, index) => index !== reviewIndex),
-      }));
+  const confirmDelete = async () => {
+    try {
+      await fetch(
+        `http://localhost:5000/api/admin/reviews/${reviewToDelete}`,
+        { method: "DELETE" }
+      );
+
+      setReviews((prev) =>
+        prev.filter((r) => r._id !== reviewToDelete)
+      );
+    } catch (err) {
+      console.error(err);
     }
+
     setShowDeleteModal(false);
     setReviewToDelete(null);
   };
 
-  const selectedReviews = reviewsData[selectedProduct.id] || [];
-
   return (
     <div className="purple-page review-page">
-      {/* Confirmation Modal */}
+      {/* MODAL */}
       {showDeleteModal && (
         <div className="custom-modal-overlay">
           <div className="custom-modal-card">
             <h3 className="msg-red">Delete Review?</h3>
-            <p>Are you sure you want to delete this review? This action cannot be undone.</p>
+            <p>This action cannot be undone.</p>
+
             <div className="modal-actions-split">
-              <button className="cancel-btn" onClick={() => setShowDeleteModal(false)}>
+              <button
+                className="cancel-btn"
+                onClick={() => setShowDeleteModal(false)}
+              >
                 Cancel
               </button>
-              <button className="delete-btn-final" onClick={confirmDelete}>
+
+              <button
+                className="delete-btn-final"
+                onClick={confirmDelete}
+              >
                 Delete
               </button>
             </div>
@@ -87,19 +110,23 @@ function ReviewManagement() {
         <AdminSidebar activePage="reviews" />
 
         <div className="review-main">
+          {/* PRODUCTS */}
           <div className="products-panel">
             {products.map((product) => (
               <div key={product.id} className="product-card">
-                <img src={product.image} alt={product.name} />
+                {product.image && (
+                  <img src={product.image} alt={product.name} />
+                )}
+
                 <h3>{product.name}</h3>
 
                 <button
                   className={
-                    selectedProduct.id === product.id
+                    selectedProductId === product.id
                       ? "reviews-btn active-review-btn"
                       : "reviews-btn"
                   }
-                  onClick={() => setSelectedProduct(product)}
+                  onClick={() => setSelectedProductId(product.id)}
                 >
                   Reviews
                 </button>
@@ -107,27 +134,31 @@ function ReviewManagement() {
             ))}
           </div>
 
+          {/* REVIEWS */}
           <div className="reviews-panel">
-            <h2>{selectedProduct.name} Reviews</h2>
+            <h2>{selectedProduct?.name || "Product"} Reviews</h2>
 
             {selectedReviews.length > 0 ? (
-              selectedReviews.map((review, index) => (
-                <div key={index} className="review-item">
+              selectedReviews.map((review) => (
+                <div key={review._id} className="review-item">
                   <div className="review-left">
                     <img
                       src={userProfile}
-                      alt={review.user}
+                      alt={review.userName}
                       className="review-user-img"
                     />
 
                     <div className="review-text-box">
-                      <span className="review-user-name">{review.user}</span>
+                      <span className="review-user-name">
+                        {review.userName}
+                      </span>
+
                       <p>{review.text}</p>
                     </div>
                   </div>
 
                   <button
-                    onClick={() => triggerDelete(selectedProduct.id, index)}
+                    onClick={() => triggerDelete(review._id)}
                     className="delete-review-btn"
                   >
                     🗑
@@ -135,7 +166,9 @@ function ReviewManagement() {
                 </div>
               ))
             ) : (
-              <div className="empty">No reviews found for this product.</div>
+              <div className="empty">
+                No reviews found for this product.
+              </div>
             )}
           </div>
         </div>

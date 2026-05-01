@@ -16,21 +16,10 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-function normalizeArray(value) {
-  if (!value) return [];
-
-  if (Array.isArray(value)) return value;
-
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
 // GET all products
 router.get("/", async (req, res) => {
   try {
-    const products = await Product.find().sort({ createdAt: -1 });
+    const products = await Product.find();
     res.status(200).json(products);
   } catch (error) {
     res.status(500).json({ message: "Failed to get products" });
@@ -55,17 +44,7 @@ router.get("/:id", async (req, res) => {
 // POST add product
 router.post("/", upload.single("image"), async (req, res) => {
   try {
-    const {
-      name,
-      price,
-      description,
-      stock,
-      scent,
-      skinType,
-      ingredients,
-      isCustomizable,
-      theme,
-    } = req.body;
+    const { name, price, description, stock } = req.body;
 
     if (!name || price === undefined || !description || stock === undefined) {
       return res.status(400).json({
@@ -81,77 +60,39 @@ router.post("/", upload.single("image"), async (req, res) => {
 
     const imageUrl = req.file
       ? `http://localhost:5000/uploads/${req.file.filename}`
-      : "";
+      : req.body.image;
 
     const product = new Product({
-      name,
+      ...req.body,
       price: Number(price),
-      description,
       stock: Number(stock),
       image: imageUrl,
-      scent: scent || "",
-      skinType: normalizeArray(skinType),
-      ingredients: normalizeArray(ingredients),
-      isCustomizable: isCustomizable === "true" || isCustomizable === true,
-      theme: theme || "pink",
     });
 
     const savedProduct = await product.save();
 
     res.status(201).json(savedProduct);
   } catch (error) {
+    console.log(error);
     res.status(500).json({
       message: "Failed to add product",
-      error: error.message,
+      error: error.message
     });
   }
 });
 
 // PUT update product
-router.put("/:id", upload.single("image"), async (req, res) => {
+router.put("/:id", async (req, res) => {
   try {
-    const updatedData = { ...req.body };
-
-    if (updatedData.price !== undefined) {
-      if (Number(updatedData.price) < 0) {
-        return res.status(400).json({
-          message: "Price must be a positive number",
-        });
-      }
-
-      updatedData.price = Number(updatedData.price);
-    }
-
-    if (updatedData.stock !== undefined) {
-      if (Number(updatedData.stock) < 0) {
-        return res.status(400).json({
-          message: "Stock must be a positive number",
-        });
-      }
-
-      updatedData.stock = Number(updatedData.stock);
-    }
-
-    if (updatedData.ingredients !== undefined) {
-      updatedData.ingredients = normalizeArray(updatedData.ingredients);
-    }
-
-    if (updatedData.skinType !== undefined) {
-      updatedData.skinType = normalizeArray(updatedData.skinType);
-    }
-
-    if (updatedData.isCustomizable !== undefined) {
-      updatedData.isCustomizable =
-        updatedData.isCustomizable === "true" || updatedData.isCustomizable === true;
-    }
-
-    if (req.file) {
-      updatedData.image = `http://localhost:5000/uploads/${req.file.filename}`;
+    if (req.body.price < 0 || req.body.stock < 0) {
+      return res.status(400).json({
+        message: "Price and stock must be positive numbers",
+      });
     }
 
     const updatedProduct = await Product.findByIdAndUpdate(
       req.params.id,
-      updatedData,
+      req.body,
       { new: true, runValidators: true }
     );
 
@@ -161,10 +102,7 @@ router.put("/:id", upload.single("image"), async (req, res) => {
 
     res.status(200).json(updatedProduct);
   } catch (error) {
-    res.status(400).json({
-      message: "Failed to update product",
-      error: error.message,
-    });
+    res.status(400).json({ message: "Failed to update product" });
   }
 });
 

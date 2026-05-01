@@ -1,74 +1,35 @@
-import { useEffect, useMemo, useState } from "react";
-import rose from "../assets/rose.png";
-import lavender from "../assets/lavender.png";
-import rosemary from "../assets/rosemary.png";
-import soap from "../assets/soap-bliss.png";
+import { useEffect, useState } from "react";
 import AdminSidebar from "../components/AdminSidebar";
 
 function InventoryManagement() {
-  const defaultProducts = useMemo(
-    () => [
-      {
-        id: 1,
-        name: "Sakura Bliss",
-        description: "A unique soap, please buy from us :)",
-        price: 3,
-        ingredients: "Sugar, Sakura, love, Milk, Other stuff, xxxx",
-        stock: 10,
-        image: rose,
-      },
-      {
-        id: 2,
-        name: "Lavender Bliss",
-        description: "A relaxing lavender soap for daily use.",
-        price: 3,
-        ingredients: "Lavender, Milk, Oils, Soft fragrance",
-        stock: 0,
-        image: lavender,
-      },
-      {
-        id: 3,
-        name: "Rosemary Bliss",
-        description: "Fresh herbal soap with rosemary extract.",
-        price: 3,
-        ingredients: "Rosemary, Olive oil, Milk, Herbs",
-        stock: 5,
-        image: rosemary,
-      },
-      {
-        id: 4,
-        name: "Soap Bliss",
-        description: "Simple handmade soap bar.",
-        price: 3,
-        ingredients: "Soap base, Oils, Fragrance",
-        stock: 12,
-        image: soap,
-      },
-    ],
-    []
-  );
-
   const [products, setProducts] = useState([]);
   const [stockValues, setStockValues] = useState({});
   const [savedMessage, setSavedMessage] = useState("");
   const [customOptions, setCustomOptions] = useState([]);
 
   useEffect(() => {
-    const storedProducts = JSON.parse(localStorage.getItem("products"));
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/admin/inventory");
+        const data = await res.json();
 
-    const initialProducts =
-      storedProducts && storedProducts.length > 0 ? storedProducts : defaultProducts;
+        setProducts(data);
 
-    setProducts(initialProducts);
-    localStorage.setItem("products", JSON.stringify(initialProducts));
+        const stockMap = {};
+        data.forEach((product) => {
+          stockMap[product._id] = product.stock;
+        });
 
-    const stockMap = {};
-    initialProducts.forEach((product) => {
-      stockMap[product.id] = product.stock;
-    });
-    setStockValues(stockMap);
-  }, [defaultProducts]);
+        setStockValues(stockMap);
+      } catch (err) {
+        console.error(err);
+      }
+    };
 
+    fetchProducts();
+  }, []);
+
+  // ✅ FETCH CUSTOM OPTIONS
   useEffect(() => {
     fetch("http://localhost:5000/api/custom-options")
       .then((res) => res.json())
@@ -76,44 +37,62 @@ function InventoryManagement() {
       .catch((err) => console.log(err));
   }, []);
 
+  // ✅ HANDLE INPUT CHANGE
   const handleStockChange = (productId, value) => {
     setStockValues((prev) => ({
       ...prev,
       [productId]: value === "" ? "" : Number(value),
     }));
-    setSavedMessage("");
   };
 
-  const handleUpdate = () => {
-    const updatedProducts = products.map((product) => ({
-      ...product,
-      stock:
-        stockValues[product.id] === "" || Number(stockValues[product.id]) < 0
-          ? 0
-          : Number(stockValues[product.id]),
-    }));
+  // ✅ UPDATE STOCK (IMPORTANT)
+  const handleUpdateStock = async (productId) => {
+    try {
+      const newStock = stockValues[productId];
 
-    setProducts(updatedProducts);
-    localStorage.setItem("products", JSON.stringify(updatedProducts));
-    setSavedMessage("Saved !");
+      const response = await fetch(
+        `http://localhost:5000/api/admin/inventory/${productId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ stock: newStock }),
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed");
+
+      const updatedProduct = await response.json();
+
+      setProducts((prev) =>
+        prev.map((product) =>
+          product._id === productId ? updatedProduct : product
+        )
+      );
+
+      setSavedMessage("Stock updated!");
+    } catch (error) {
+      console.error(error);
+      setSavedMessage("Failed to update");
+    }
   };
 
+  // ✅ TOGGLE CUSTOM OPTION
   const handleToggleOption = async (option) => {
     try {
       const response = await fetch(
         `http://localhost:5000/api/custom-options/${option._id}`,
         {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             available: !option.available,
           }),
         }
       );
 
-      if (!response.ok) throw new Error("Failed to update option");
+      if (!response.ok) throw new Error("Failed");
 
       setCustomOptions((prev) =>
         prev.map((item) =>
@@ -130,280 +109,144 @@ function InventoryManagement() {
   };
 
   return (
-    <div
-      className="purple-page"
-      style={{
-        minHeight: "100vh",
-        padding: "18px 24px",
-        boxSizing: "border-box",
-      }}
-    >
-      <div
-        className="inventory-management-layout"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "220px 1fr",
-          gap: "18px",
-        }}
-      >
+    <div className="purple-page" style={{ minHeight: "100vh", padding: "18px 24px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "18px" }}>
         <AdminSidebar activePage="inventory" />
 
         <div style={mainPanelStyle}>
           {savedMessage && (
-            <p
-              style={{
-                margin: "0 0 16px",
-                color: "#ff4d6d",
-                fontSize: "13px",
-                textAlign: "center",
-                fontWeight: "600",
-              }}
-            >
-              {savedMessage}
-            </p>
+            <p style={{ textAlign: "center", color: "#ff4d6d" }}>{savedMessage}</p>
           )}
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              marginBottom: "18px",
-            }}
-          >
-            <button style={updateButtonStyle} onClick={handleUpdate}>
-              Update
-            </button>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "22px" }}>
+            {products.map((product) => {
+              const isLow = product.stock <= 5;
+
+              return (
+                <div key={product._id} style={inventoryCardStyle}>
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    style={{ width: "170px", height: "170px", objectFit: "contain" }}
+                  />
+
+                  <h3>{product.name}</h3>
+
+                  {/* ✅ LOW STOCK */}
+                  <p style={{ color: isLow ? "red" : "green" }}>
+                    {isLow ? "Low Stock 🔴" : "In Stock 🟢"}
+                  </p>
+
+                  <input
+                    type="number"
+                    min="0"
+                    value={stockValues[product._id] ?? product.stock}
+                    onChange={(e) =>
+                      handleStockChange(product._id, e.target.value)
+                    }
+                    style={stockInputStyle}
+                  />
+
+                  {/* ✅ SAVE BUTTON */}
+                  <button
+                    style={updateButtonStyle}
+                    onClick={() => handleUpdateStock(product._id)}
+                  >
+                    Save
+                  </button>
+                </div>
+              );
+            })}
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "22px",
-              alignItems: "flex-start",
-            }}
-          >
-            {products.map((product) => (
-              <div key={product.id} style={inventoryCardStyle}>
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  style={{
-                    width: "170px",
-                    height: "170px",
-                    objectFit: "contain",
-                    marginBottom: "18px",
-                  }}
-                />
+          {/* CUSTOM OPTIONS */}
+          <div style={{ marginTop: "40px" }}>
+            <h2 style={{ textAlign: "center" }}>Custom Options</h2>
 
-                <h3
-                  style={{
-                    margin: "0 0 56px",
-                    fontSize: "18px",
-                    color: "#2e3d4c",
-                    fontWeight: "500",
-                    textAlign: "center",
-                  }}
-                >
-                  {product.name}
-                </h3>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+              {customOptions.map((option) => (
+                <div key={option._id} style={inventoryCardStyle}>
+                  <h3>{option.name}</h3>
+                  <p>{option.type}</p>
 
-                <input
-                  type="number"
-                  min="0"
-                  value={stockValues[product.id] ?? product.stock}
-                  onChange={(e) => handleStockChange(product.id, e.target.value)}
-                  style={stockInputStyle}
-                />
-              </div>
-            ))}
-            <div style={{ width: "100%", marginTop: "32px" }}>
-              <h2
-                style={{
-                  textAlign: "center",
-                  color: "#2e3d4c",
-                  marginBottom: "18px",
-                }}
-              >
-                Custom Options Availability
-              </h2>
+                  <input
+                    type="number"
+                    value={option.stock}
+                    onChange={async (e) => {
+                      const newStock = Number(e.target.value);
 
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "16px",
-                  justifyContent: "center",
-                }}
-              >
-                {customOptions.map((option) => (
-                  <div key={option._id} style={inventoryCardStyle}>
-                    <h3
-                      style={{
-                        margin: "0 0 10px",
-                        fontSize: "18px",
-                        color: "#2e3d4c",
-                      }}
-                    >
-                      {option.name}
-                    </h3>
+                      await fetch(
+                        `http://localhost:5000/api/custom-options/${option._id}`,
+                        {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ stock: newStock }),
+                        }
+                      );
 
-                    <p style={{ margin: "0 0 10px", color: "#555" }}>
-                      {option.type}
-                    </p>
+                      setCustomOptions((prev) =>
+                        prev.map((item) =>
+                          item._id === option._id
+                            ? { ...item, stock: newStock }
+                            : item
+                        )
+                      );
+                    }}
+                    style={stockInputStyle}
+                  />
 
-                    <p style={{ margin: "0 0 14px", color: "#555" }}>
-                      Stock: {option.stock}
-                    </p>
-
-                    <div style={{ marginBottom: "10px" }}>
-                      <input
-                        type="number"
-                        min="0"
-                        value={option.stock}
-                        onChange={async (e) => {
-                          const newStock = Number(e.target.value);
-
-                          await fetch(`http://localhost:5000/api/custom-options/${option._id}`, {
-                            method: "PUT",
-                            headers: {
-                              "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify({ stock: newStock }),
-                          });
-
-                          setCustomOptions((prev) =>
-                            prev.map((item) =>
-                              item._id === option._id
-                                ? { ...item, stock: newStock }
-                                : item
-                            )
-                          );
-                        }}
-                        style={stockInputStyle}
-                      />
-                    </div>
-
-                    <button
-                      onClick={() => handleToggleOption(option)}
-                      style={{
-                        ...updateButtonStyle,
-                        width: "150px",
-                        background:
-                          option.available && option.stock > 0
-                            ? "#39a86f"
-                            : "#ff5a45"
-                      }}
-                    >
-                      {option.available && option.stock > 0 ? "Available" : "Unavailable"}
-                    </button>
-                  </div>
-                ))}
-              </div>
+                  <button
+                    onClick={() => handleToggleOption(option)}
+                    style={{
+                      ...updateButtonStyle,
+                      background:
+                        option.available && option.stock > 0
+                          ? "#39a86f"
+                          : "#ff5a45",
+                    }}
+                  >
+                    {option.available && option.stock > 0
+                      ? "Available"
+                      : "Unavailable"}
+                  </button>
+                </div>
+              ))}
             </div>
-
           </div>
         </div>
       </div>
-
-      <style>
-        {`
-          @media (max-width: 1100px) {
-            .inventory-management-layout {
-              grid-template-columns: 1fr !important;
-            }
-          }
-
-          .sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-          }
-
-          .sidebar button {
-            background: rgba(255,255,255,0.12);
-            border: 1px solid rgba(255,255,255,0.35);
-            border-radius: 18px;
-            padding: 14px 12px;
-            font-family: Josefin Sans, sans-serif;
-            font-size: 18px;
-            color: #2e3d4c;
-            cursor: pointer;
-          }
-
-          .sidebar .active {
-            font-weight: 700;
-          }
-
-          .logo-card {
-            background: rgba(255,255,255,0.12);
-            border: 1px solid rgba(255,255,255,0.35);
-            border-radius: 24px;
-            backdrop-filter: blur(14px);
-            padding: 16px;
-            text-align: center;
-          }
-
-          .logo-card img {
-            width: 100%;
-            max-width: 120px;
-            object-fit: contain;
-            display: block;
-            margin: 0 auto;
-          }
-
-          .spacer {
-            flex: 1;
-          }
-        `}
-      </style>
     </div>
   );
 }
 
 const mainPanelStyle = {
   background: "rgba(255,255,255,0.10)",
-  border: "1px solid rgba(255,255,255,0.35)",
   borderRadius: "28px",
-  backdropFilter: "blur(14px)",
   padding: "22px",
-  minHeight: "560px",
-  boxSizing: "border-box",
 };
 
 const inventoryCardStyle = {
   width: "200px",
   background: "rgba(255,255,255,0.22)",
-  border: "1px solid rgba(255,255,255,0.35)",
   borderRadius: "18px",
-  padding: "18px 16px 40px",
+  padding: "18px",
   textAlign: "center",
 };
 
 const stockInputStyle = {
-  width: "56px",
-  padding: "4px 6px",
-  borderRadius: "8px",
-  border: "1px solid #8f8f8f",
-  outline: "none",
-  fontSize: "22px",
-  fontFamily: "Josefin Sans, sans-serif",
-  boxSizing: "border-box",
-  background: "rgba(255,255,255,0.95)",
+  width: "60px",
+  fontSize: "18px",
   textAlign: "center",
-  color: "#2e3d4c",
 };
 
 const updateButtonStyle = {
+  marginTop: "10px",
   background: "#8f42d9",
   color: "white",
   border: "none",
   borderRadius: "8px",
-  padding: "10px 16px",
-  fontFamily: "Josefin Sans, sans-serif",
-  fontWeight: "600",
+  padding: "6px 12px",
   cursor: "pointer",
-  width: "110px",
 };
 
 export default InventoryManagement;

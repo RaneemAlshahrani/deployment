@@ -1,59 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import rose from "../assets/rose.png";
-import lavender from "../assets/lavender.png";
 import rosemary from "../assets/rosemary.png";
-import soap from "../assets/soap-bliss.png";
 import AdminSidebar from "../components/AdminSidebar";
 
 function ProductManagement() {
-  const defaultProducts = useMemo(
-    () => [
-      {
-        id: 1,
-        name: "Sakura Bliss",
-        description: "A unique soap, please buy from us :)",
-        price: 3,
-        ingredients: "Sugar, Sakura, love, Milk, Other stuff, xxxx",
-        stock: 10,
-        image: rose,
-      },
-      {
-        id: 2,
-        name: "Lavender Bliss",
-        description: "A relaxing lavender soap for daily use.",
-        price: 3,
-        ingredients: "Lavender, Milk, Oils, Soft fragrance",
-        stock: 8,
-        image: lavender,
-      },
-      {
-        id: 3,
-        name: "Rosemary Bliss",
-        description: "Fresh herbal soap with rosemary extract.",
-        price: 3,
-        ingredients: "Rosemary, Olive oil, Milk, Herbs",
-        stock: 10,
-        image: rosemary,
-      },
-      {
-        id: 4,
-        name: "Soap Bliss",
-        description: "Simple handmade soap bar.",
-        price: 3,
-        ingredients: "Soap base, Oils, Fragrance",
-        stock: 12,
-        image: soap,
-      },
-    ],
-    []
-  );
-
   const [products, setProducts] = useState([]);
   const [mode, setMode] = useState("list");
   const [savedMessage, setSavedMessage] = useState("");
   const [formError, setFormError] = useState("");
   const [imageFile, setImageFile] = useState(null);
-
 
   const [formData, setFormData] = useState({
     id: null,
@@ -62,31 +17,26 @@ function ProductManagement() {
     price: "",
     ingredients: "",
     stock: "",
-    image: rose,
+    image: "",
     theme: "pink",
     scent: "",
     skinType: [],
   });
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/api/products");
-        const data = await res.json();
-
-        if (data.length > 0) {
-          setProducts(data);
-        } else {
-          setProducts(defaultProducts);
-        }
-      } catch (err) {
-        console.error(err);
-        setProducts(defaultProducts);
-      }
-    };
-
     fetchProducts();
   }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/admin/products");
+      const data = await res.json();
+      setProducts(data);
+    } catch (err) {
+      console.error(err);
+      setFormError("Failed to load products");
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -96,11 +46,13 @@ function ProductManagement() {
       price: "",
       ingredients: "",
       stock: "",
-      image: rose,
+      image: "",
+      theme: "pink",
       scent: "",
       skinType: [],
-
     });
+
+    setImageFile(null);
     setFormError("");
   };
 
@@ -112,15 +64,21 @@ function ProductManagement() {
 
   const handleEdit = (product) => {
     setFormData({
-      id: product._id || product.id,
-      name: product.name,
-      description: product.description,
-      price: product.price,
-      ingredients: product.ingredients,
-      stock: product.stock,
-      image: product.image,
+      id: product._id,
+      name: product.name || "",
+      description: product.description || "",
+      price: product.price || "",
+      ingredients: Array.isArray(product.ingredients)
+        ? product.ingredients.join(", ")
+        : product.ingredients || "",
+      stock: product.stock || "",
+      image: product.image || "",
       theme: product.theme || "pink",
+      scent: product.scent || "",
+      skinType: product.skinType || [],
     });
+
+    setImageFile(null);
     setFormError("");
     setSavedMessage("");
     setMode("edit");
@@ -128,15 +86,20 @@ function ProductManagement() {
 
   const handleDelete = async (productId) => {
     try {
-      await fetch(`http://localhost:5000/api/products/${productId}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `http://localhost:5000/api/admin/products/${productId}`,
+        {
+          method: "DELETE",
+        }
+      );
 
-      setProducts((prev) => prev.filter((p) => (p._id || p.id) !== productId));
-      setSavedMessage("Deleted !");
+      if (!res.ok) throw new Error("Failed to delete");
+
+      setProducts((prev) => prev.filter((p) => p._id !== productId));
+      setSavedMessage("Deleted successfully!");
     } catch (err) {
       console.error(err);
-      setFormError("Failed to delete");
+      setFormError("Failed to delete product");
     }
   };
 
@@ -157,6 +120,21 @@ function ProductManagement() {
     setSavedMessage("");
   };
 
+  const handleSkinTypeChange = (e) => {
+    const value = e.target.value;
+
+    setFormData((prev) => {
+      const current = prev.skinType || [];
+
+      return {
+        ...prev,
+        skinType: current.includes(value)
+          ? current.filter((item) => item !== value)
+          : [...current, value],
+      };
+    });
+  };
+
   const handleSaveProduct = async () => {
     if (
       !formData.name.trim() ||
@@ -172,17 +150,26 @@ function ProductManagement() {
     try {
       const data = new FormData();
 
-      Object.keys(formData).forEach((key) => {
-        data.append(key, formData[key]);
-      });
+      data.append("name", formData.name);
+      data.append("description", formData.description);
+      data.append("price", formData.price);
+      data.append("ingredients", formData.ingredients);
+      data.append("stock", formData.stock);
+      data.append("theme", formData.theme);
+      data.append("scent", formData.scent);
+      data.append("skinType", formData.skinType.join(","));
+      data.append("isCustomizable", false);
 
-      // مهم: الصورة
-      data.append("image", imageFile);
+      if (imageFile) {
+        data.append("image", imageFile);
+      } else if (formData.image) {
+        data.append("image", formData.image);
+      }
 
       const url =
         mode === "edit"
-          ? `http://localhost:5000/api/products/${formData.id}`
-          : "http://localhost:5000/api/products";
+          ? `http://localhost:5000/api/admin/products/${formData.id}`
+          : "http://localhost:5000/api/admin/products";
 
       const method = mode === "edit" ? "PUT" : "POST";
 
@@ -191,30 +178,55 @@ function ProductManagement() {
         body: data,
       });
 
-      if (!response.ok) throw new Error("Failed");
+      const savedProduct = await response.json();
 
-      setSavedMessage("Added successfully 🎉");
+      if (!response.ok) {
+        setFormError(savedProduct.message || "Failed to save product");
+        return;
+      }
 
+      if (mode === "edit") {
+        setProducts((prev) =>
+          prev.map((product) =>
+            product._id === savedProduct._id ? savedProduct : product
+          )
+        );
+        setSavedMessage("Product updated successfully!");
+      } else {
+        setProducts((prev) => [savedProduct, ...prev]);
+        setSavedMessage("Product added successfully!");
+      }
+
+      resetForm();
+      setMode("list");
     } catch (error) {
       console.error(error);
-      setFormError("Error adding product");
+      setFormError("Error saving product");
     }
   };
 
+  const getImageSrc = (image) => {
+    if (!image) return rose;
+    if (image.startsWith("http")) return image;
+    return image;
+  };
+
   const getEditTheme = () => {
-    if (formData.image === rose) {
+    if (formData.theme === "pink") {
       return {
         pageClass: "pink-page",
-        overlay: "linear-gradient(135deg, rgba(180,95,105,0.12), rgba(217,154,165,0.1))",
+        overlay:
+          "linear-gradient(135deg, rgba(180,95,105,0.12), rgba(217,154,165,0.1))",
         buttonColor: "#b84a57",
         labelColor: "#b04f60",
       };
     }
 
-    if (formData.image === rosemary) {
+    if (formData.theme === "yellow") {
       return {
         pageClass: "yellow-page",
-        overlay: "linear-gradient(135deg, rgba(216,182,79,0.10), rgba(243,223,143,0.08))",
+        overlay:
+          "linear-gradient(135deg, rgba(216,182,79,0.10), rgba(243,223,143,0.08))",
         buttonColor: "#9c8830",
         labelColor: "#8a7623",
       };
@@ -222,7 +234,8 @@ function ProductManagement() {
 
     return {
       pageClass: "purple-page",
-      overlay: "linear-gradient(135deg, rgba(203,183,230,0.12), rgba(168,139,216,0.1))",
+      overlay:
+        "linear-gradient(135deg, rgba(203,183,230,0.12), rgba(168,139,216,0.1))",
       buttonColor: "#8f42d9",
       labelColor: "#7f58ba",
     };
@@ -249,20 +262,7 @@ function ProductManagement() {
       >
         {mode !== "edit" && <AdminSidebar activePage="products" />}
 
-        <div
-          style={{
-            ...(mode === "edit"
-              ? {
-                background: "transparent",
-                border: "none",
-                borderRadius: 0,
-                backdropFilter: "none",
-                padding: 0,
-                minHeight: "calc(100vh - 36px)",
-              }
-              : mainPanelStyle),
-          }}
-        >
+        <div style={mode === "edit" ? editPageStyle : mainPanelStyle}>
           {mode === "list" ? (
             <>
               <div
@@ -277,19 +277,8 @@ function ProductManagement() {
                 </button>
               </div>
 
-              {savedMessage && (
-                <p
-                  style={{
-                    margin: "0 0 14px",
-                    color: "#ff4d6d",
-                    fontSize: "13px",
-                    textAlign: "center",
-                    fontWeight: "600",
-                  }}
-                >
-                  {savedMessage}
-                </p>
-              )}
+              {savedMessage && <p style={successMessageStyle}>{savedMessage}</p>}
+              {formError && <p style={errorMessageStyle}>{formError}</p>}
 
               <div
                 style={{
@@ -302,13 +291,9 @@ function ProductManagement() {
                 {products
                   .filter((product) => !product.isCustomizable)
                   .map((product) => (
-                    <div key={product._id || product.id} style={productCardStyle}>
+                    <div key={product._id} style={productCardStyle}>
                       <img
-                        src={
-                          product.image?.startsWith("http")
-                            ? product.image
-                            : new URL(`../assets/${product.image}`, import.meta.url).href
-                        }
+                        src={getImageSrc(product.image)}
                         alt={product.name}
                         style={{
                           width: "170px",
@@ -320,7 +305,7 @@ function ProductManagement() {
 
                       <h3
                         style={{
-                          margin: "0 0 28px",
+                          margin: "0 0 10px",
                           fontSize: "18px",
                           color: "#2e3d4c",
                           fontWeight: "500",
@@ -329,9 +314,17 @@ function ProductManagement() {
                         {product.name}
                       </h3>
 
+                      <p style={{ margin: "0 0 10px", color: "#2e3d4c" }}>
+                        ${Number(product.price || 0).toFixed(2)}
+                      </p>
+
+                      <p style={{ margin: "0 0 18px", color: "#2e3d4c" }}>
+                        Stock: {product.stock}
+                      </p>
+
                       <button
                         style={purpleButtonStyle}
-                        onClick={() => handleDelete(product._id || product.id)}
+                        onClick={() => handleDelete(product._id)}
                       >
                         Delete
                       </button>
@@ -347,229 +340,24 @@ function ProductManagement() {
               </div>
             </>
           ) : mode === "add" ? (
-            <div
-              className="product-form-grid"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 380px",
-                gap: "16px",
-                alignItems: "start",
-                minHeight: "520px",
-              }}
-            >
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div style={fieldBoxStyle}>
-                  <label style={fieldLabelStyle}>Name</label>
-                  <input
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    style={wideInputStyle}
-                  />
-                </div>
-
-                <div style={fieldBoxStyle}>
-                  <label style={fieldLabelStyle}>Description</label>
-                  <input
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    style={wideInputStyle}
-                  />
-                </div>
-
-                <div style={fieldBoxStyle}>
-                  <label style={fieldLabelStyle}>Price</label>
-                  <input
-                    type="number"
-                    name="price"
-                    value={formData.price}
-                    onChange={handleChange}
-                    style={smallInputStyle}
-                  />
-                </div>
-
-                <div style={fieldBoxStyle}>
-                  <label style={fieldLabelStyle}>Ingredients</label>
-                  <input
-                    name="ingredients"
-                    value={formData.ingredients}
-                    onChange={handleChange}
-                    style={wideInputStyle}
-                  />
-                </div>
-
-                <div style={fieldBoxStyle}>
-                  <label style={fieldLabelStyle}>Scent</label>
-                  <select
-                    name="scent"
-                    value={formData.scent || ""}
-                    onChange={handleChange}
-                    style={wideInputStyle}
-                  >
-                    <option value="">Select scent</option>
-                    <option value="Lavender">Lavender</option>
-                    <option value="Sakura">Sakura</option>
-                    <option value="Coconut">Coconut</option>
-                    <option value="Unscented">Unscented</option>
-                    <option value="Rose">Rose</option>
-                    <option value="Honey">Honey</option>
-                  </select>
-                </div>
-
-                <div style={fieldBoxStyle}>
-                  <label style={fieldLabelStyle}>Skin Type</label>
-
-                  {["Normal", "Dry", "Oily", "Sensitive"].map((type) => (
-                    <label key={type} style={{ display: "block", textAlign: "center" }}>
-                      <input
-                        type="checkbox"
-                        value={type}
-                        checked={formData.skinType?.includes(type) || false}
-                        onChange={(e) => {
-                          const value = e.target.value;
-
-                          setFormData((prev) => {
-                            const current = prev.skinType || [];
-
-                            return {
-                              ...prev,
-                              skinType: current.includes(value)
-                                ? current.filter((t) => t !== value)
-                                : [...current, value],
-                            };
-                          });
-                        }}
-                      />
-                      {" "}{type}
-                    </label>
-                  ))}
-                </div>
-
-                <div style={fieldBoxStyle}>
-                  <label style={fieldLabelStyle}>In stock</label>
-                  <input
-                    type="number"
-                    name="stock"
-                    value={formData.stock}
-                    onChange={handleChange}
-                    style={smallInputStyle}
-                  />
-                </div>
-
-                <div style={fieldBoxStyle}>
-                  <label style={fieldLabelStyle}>Theme</label>
-                  <div style={fieldBoxStyle}>
-                    <label style={fieldLabelStyle}>Theme</label>
-
-                    <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
-
-                      {["pink", "purple", "yellow"].map((color) => (
-                        <div
-                          key={color}
-                          onClick={() =>
-                            setFormData((prev) => ({ ...prev, theme: color }))
-                          }
-                          style={{
-                            width: "34px",
-                            height: "34px",
-                            borderRadius: "50%",
-                            cursor: "pointer",
-                            transition: "0.2s",
-
-                            background:
-                              color === "pink"
-                                ? "#f8b6c2"
-                                : color === "purple"
-                                  ? "#cbb7e6"
-                                  : "#f5e6a3",
-
-                            border:
-                              formData.theme === color
-                                ? "3px solid black"
-                                : "1px solid #ccc",
-                          }}
-                        />
-                      ))}
-
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={imagePanelStyle}>
-                <p style={{ textAlign: "center", fontWeight: "600", color: "#2e3d4c" }}>
-                  Image
-                </p>
-
-                {imageFile ? (
-                  <img
-                    src={URL.createObjectURL(imageFile)}
-                    alt="Selected"
-                    style={{
-                      width: "240px",
-                      height: "240px",
-                      objectFit: "contain",
-                      margin: "0 auto 16px",
-                      display: "block",
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: "240px",
-                      height: "240px",
-                      margin: "0 auto 16px",
-                      border: "2px dashed #aaa",
-                      borderRadius: "12px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#555",
-                      fontSize: "20px",
-                    }}
-                  >
-                    Select an image
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "10px",
-                    justifyContent: "center",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <input
-                    type="file"
-                    onChange={(e) => setImageFile(e.target.files[0])}
-                  />
-                </div>
-              </div>
-
-              <div
-                style={{
-                  gridColumn: "1 / -1",
-                  textAlign: "center",
-                  marginTop: "10px",
-                }}
-              >
-                {formError && <p style={{ color: "red" }}>{formError}</p>}
-                {savedMessage && <p style={{ color: "#ff4d6d" }}>{savedMessage}</p>}
-
-                <button style={purpleButtonStyle} onClick={handleSaveProduct}>
-                  Add Product
-                </button>
-              </div>
-            </div>
+            <ProductForm
+              formData={formData}
+              imageFile={imageFile}
+              setImageFile={setImageFile}
+              handleChange={handleChange}
+              handleSkinTypeChange={handleSkinTypeChange}
+              setFormData={setFormData}
+              formError={formError}
+              savedMessage={savedMessage}
+              handleSaveProduct={handleSaveProduct}
+              buttonText="Add Product"
+            />
           ) : (
             <div
               className="edit-layout"
               style={{
                 minHeight: "calc(100vh - 36px)",
                 background: editTheme.overlay,
-                borderRadius: "0",
                 padding: "24px 26px",
                 boxSizing: "border-box",
               }}
@@ -604,7 +392,7 @@ function ProductManagement() {
                     }}
                   >
                     <img
-                      src={formData.image}
+                      src={imageFile ? URL.createObjectURL(imageFile) : getImageSrc(formData.image)}
                       alt={formData.name}
                       style={{
                         width: "100%",
@@ -625,130 +413,71 @@ function ProductManagement() {
                     paddingTop: "22px",
                   }}
                 >
+                  <EditField
+                    label="Name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    labelColor={editTheme.labelColor}
+                  />
+
+                  <EditField
+                    label="Description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    labelColor={editTheme.labelColor}
+                  />
+
+                  <EditField
+                    label="Price"
+                    name="price"
+                    type="number"
+                    value={formData.price}
+                    onChange={handleChange}
+                    labelColor={editTheme.labelColor}
+                    small
+                  />
+
+                  <EditField
+                    label="Ingredients"
+                    name="ingredients"
+                    value={formData.ingredients}
+                    onChange={handleChange}
+                    labelColor={editTheme.labelColor}
+                  />
+
+                  <EditField
+                    label="In stock"
+                    name="stock"
+                    type="number"
+                    value={formData.stock}
+                    onChange={handleChange}
+                    labelColor={editTheme.labelColor}
+                    small
+                  />
+
                   <div style={pinkFieldBoxStyle}>
-                    <label style={{ ...pinkFieldLabelStyle, color: editTheme.labelColor }}>
-                      Description
+                    <label
+                      style={{
+                        ...pinkFieldLabelStyle,
+                        color: editTheme.labelColor,
+                      }}
+                    >
+                      Image
                     </label>
+
                     <input
-                      name="description"
-                      value={formData.description}
-                      onChange={handleChange}
-                      style={wideInputStyle}
+                      type="file"
+                      onChange={(e) => setImageFile(e.target.files[0])}
                     />
                   </div>
 
-                  <div style={pinkFieldBoxStyle}>
-                    <label style={{ ...pinkFieldLabelStyle, color: editTheme.labelColor }}>
-                      Price:
-                    </label>
-                    <input
-                      type="number"
-                      name="price"
-                      value={formData.price}
-                      onChange={handleChange}
-                      style={smallInputStyle}
-                    />
-                  </div>
+                  <ThemeSelector formData={formData} setFormData={setFormData} />
 
-                  <div style={pinkFieldBoxStyle}>
-                    <label style={{ ...pinkFieldLabelStyle, color: editTheme.labelColor }}>
-                      Ingredients
-                    </label>
-                    <input
-                      name="ingredients"
-                      value={formData.ingredients}
-                      onChange={handleChange}
-                      style={wideInputStyle}
-                    />
-                  </div>
-
-                  <div style={pinkFieldBoxStyle}>
-                    <label style={{ ...pinkFieldLabelStyle, color: editTheme.labelColor }}>
-                      In stock:
-                    </label>
-                    <input
-                      type="number"
-                      name="stock"
-                      value={formData.stock}
-                      onChange={handleChange}
-                      style={smallInputStyle}
-                    />
-                  </div>
-
-                  <div style={pinkFieldBoxStyle}>
-                    <label style={{ ...pinkFieldLabelStyle, color: editTheme.labelColor }}>
-                      Theme
-                    </label>
-
-                    <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
-                      {["pink", "purple", "yellow"].map((color) => (
-                        <div
-                          key={color}
-                          onClick={() =>
-                            setFormData((prev) => ({ ...prev, theme: color }))
-                          }
-                          style={{
-                            width: "34px",
-                            height: "34px",
-                            borderRadius: "50%",
-                            cursor: "pointer",
-                            transition: "0.2s",
-
-                            background:
-                              color === "pink"
-                                ? "#f8b6c2"
-                                : color === "purple"
-                                  ? "#cbb7e6"
-                                  : "#f5e6a3",
-
-                            border:
-                              formData.theme === color
-                                ? "3px solid black"
-                                : "1px solid #ccc",
-
-                            transform:
-                              formData.theme === color ? "scale(1.1)" : "scale(1)",
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop: "120px",
-                      background: "rgba(255,255,255,0.10)",
-                      border: "1px solid rgba(255,255,255,0.35)",
-                      borderRadius: "24px",
-                      padding: "18px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {savedMessage && (
-                      <p
-                        style={{
-                          margin: "0 0 8px",
-                          color: "#ff4d6d",
-                          fontSize: "13px",
-                          fontWeight: "600",
-                        }}
-                      >
-                        {savedMessage}
-                      </p>
-                    )}
-
-                    {formError && (
-                      <p
-                        style={{
-                          margin: "0 0 8px",
-                          color: "red",
-                          fontSize: "13px",
-                          fontWeight: "600",
-                        }}
-                      >
-                        {formError}
-                      </p>
-                    )}
+                  <div style={savePanelStyle}>
+                    {savedMessage && <p style={successMessageStyle}>{savedMessage}</p>}
+                    {formError && <p style={errorMessageStyle}>{formError}</p>}
 
                     <button
                       style={{
@@ -757,7 +486,7 @@ function ProductManagement() {
                       }}
                       onClick={handleSaveProduct}
                     >
-                      Edit
+                      Save Changes
                     </button>
                   </div>
                 </div>
@@ -826,6 +555,242 @@ function ProductManagement() {
     </div>
   );
 }
+
+function ProductForm({
+  formData,
+  imageFile,
+  setImageFile,
+  handleChange,
+  handleSkinTypeChange,
+  setFormData,
+  formError,
+  savedMessage,
+  handleSaveProduct,
+  buttonText,
+}) {
+  return (
+    <div
+      className="product-form-grid"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 380px",
+        gap: "16px",
+        alignItems: "start",
+        minHeight: "520px",
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={fieldBoxStyle}>
+          <label style={fieldLabelStyle}>Name</label>
+          <input
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            style={wideInputStyle}
+          />
+        </div>
+
+        <div style={fieldBoxStyle}>
+          <label style={fieldLabelStyle}>Description</label>
+          <input
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            style={wideInputStyle}
+          />
+        </div>
+
+        <div style={fieldBoxStyle}>
+          <label style={fieldLabelStyle}>Price</label>
+          <input
+            type="number"
+            name="price"
+            value={formData.price}
+            onChange={handleChange}
+            style={smallInputStyle}
+          />
+        </div>
+
+        <div style={fieldBoxStyle}>
+          <label style={fieldLabelStyle}>Ingredients</label>
+          <input
+            name="ingredients"
+            value={formData.ingredients}
+            onChange={handleChange}
+            style={wideInputStyle}
+          />
+        </div>
+
+        <div style={fieldBoxStyle}>
+          <label style={fieldLabelStyle}>Scent</label>
+          <select
+            name="scent"
+            value={formData.scent || ""}
+            onChange={handleChange}
+            style={wideInputStyle}
+          >
+            <option value="">Select scent</option>
+            <option value="Lavender">Lavender</option>
+            <option value="Sakura">Sakura</option>
+            <option value="Coconut">Coconut</option>
+            <option value="Unscented">Unscented</option>
+            <option value="Rose">Rose</option>
+            <option value="Honey">Honey</option>
+          </select>
+        </div>
+
+        <div style={fieldBoxStyle}>
+          <label style={fieldLabelStyle}>Skin Type</label>
+
+          {["Normal", "Dry", "Oily", "Sensitive"].map((type) => (
+            <label key={type} style={{ display: "block", textAlign: "center" }}>
+              <input
+                type="checkbox"
+                value={type}
+                checked={formData.skinType?.includes(type) || false}
+                onChange={handleSkinTypeChange}
+              />{" "}
+              {type}
+            </label>
+          ))}
+        </div>
+
+        <div style={fieldBoxStyle}>
+          <label style={fieldLabelStyle}>In stock</label>
+          <input
+            type="number"
+            name="stock"
+            value={formData.stock}
+            onChange={handleChange}
+            style={smallInputStyle}
+          />
+        </div>
+
+        <ThemeSelector formData={formData} setFormData={setFormData} />
+      </div>
+
+      <div style={imagePanelStyle}>
+        <p style={{ textAlign: "center", fontWeight: "600", color: "#2e3d4c" }}>
+          Image
+        </p>
+
+        {imageFile ? (
+          <img
+            src={URL.createObjectURL(imageFile)}
+            alt="Selected"
+            style={{
+              width: "240px",
+              height: "240px",
+              objectFit: "contain",
+              margin: "0 auto 16px",
+              display: "block",
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: "240px",
+              height: "240px",
+              margin: "0 auto 16px",
+              border: "2px dashed #aaa",
+              borderRadius: "12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#555",
+              fontSize: "20px",
+            }}
+          >
+            Select an image
+          </div>
+        )}
+
+        <input type="file" onChange={(e) => setImageFile(e.target.files[0])} />
+      </div>
+
+      <div
+        style={{
+          gridColumn: "1 / -1",
+          textAlign: "center",
+          marginTop: "10px",
+        }}
+      >
+        {formError && <p style={errorMessageStyle}>{formError}</p>}
+        {savedMessage && <p style={successMessageStyle}>{savedMessage}</p>}
+
+        <button style={purpleButtonStyle} onClick={handleSaveProduct}>
+          {buttonText}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ThemeSelector({ formData, setFormData }) {
+  return (
+    <div style={fieldBoxStyle}>
+      <label style={fieldLabelStyle}>Theme</label>
+
+      <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+        {["pink", "purple", "yellow"].map((color) => (
+          <div
+            key={color}
+            onClick={() => setFormData((prev) => ({ ...prev, theme: color }))}
+            style={{
+              width: "34px",
+              height: "34px",
+              borderRadius: "50%",
+              cursor: "pointer",
+              background:
+                color === "pink"
+                  ? "#f8b6c2"
+                  : color === "purple"
+                  ? "#cbb7e6"
+                  : "#f5e6a3",
+              border:
+                formData.theme === color ? "3px solid black" : "1px solid #ccc",
+              transform: formData.theme === color ? "scale(1.1)" : "scale(1)",
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EditField({
+  label,
+  name,
+  value,
+  onChange,
+  labelColor,
+  type = "text",
+  small = false,
+}) {
+  return (
+    <div style={pinkFieldBoxStyle}>
+      <label style={{ ...pinkFieldLabelStyle, color: labelColor }}>
+        {label}
+      </label>
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        style={small ? smallInputStyle : wideInputStyle}
+      />
+    </div>
+  );
+}
+
+const editPageStyle = {
+  background: "transparent",
+  border: "none",
+  borderRadius: 0,
+  backdropFilter: "none",
+  padding: 0,
+  minHeight: "calc(100vh - 36px)",
+};
 
 const mainPanelStyle = {
   background: "rgba(255,255,255,0.10)",
@@ -909,16 +874,6 @@ const purpleButtonStyle = {
   minWidth: "108px",
 };
 
-const imageSelectButtonStyle = {
-  background: "rgba(255,255,255,0.28)",
-  color: "#2e3d4c",
-  border: "1px solid rgba(255,255,255,0.35)",
-  borderRadius: "8px",
-  padding: "8px 12px",
-  fontFamily: "Josefin Sans, sans-serif",
-  cursor: "pointer",
-};
-
 const addButtonStyle = {
   background: "#8f42d9",
   color: "white",
@@ -965,6 +920,31 @@ const editButtonStyle = {
   fontFamily: "Josefin Sans, sans-serif",
   fontWeight: "600",
   cursor: "pointer",
+};
+
+const savePanelStyle = {
+  marginTop: "80px",
+  background: "rgba(255,255,255,0.10)",
+  border: "1px solid rgba(255,255,255,0.35)",
+  borderRadius: "24px",
+  padding: "18px",
+  textAlign: "center",
+};
+
+const successMessageStyle = {
+  margin: "0 0 14px",
+  color: "#ff4d6d",
+  fontSize: "13px",
+  textAlign: "center",
+  fontWeight: "600",
+};
+
+const errorMessageStyle = {
+  margin: "0 0 14px",
+  color: "red",
+  fontSize: "13px",
+  textAlign: "center",
+  fontWeight: "600",
 };
 
 export default ProductManagement;

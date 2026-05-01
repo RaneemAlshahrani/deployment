@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AdminSidebar from "../components/AdminSidebar";
 import "../styles/promotionsManagement.css";
 
 function PromotionsManagement() {
+  const [promotions, setPromotions] = useState([]);
+
   const [form, setForm] = useState({
     code: "",
     expiry: "",
@@ -12,6 +14,22 @@ function PromotionsManagement() {
 
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchPromotions();
+  }, []);
+
+  const fetchPromotions = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/admin/promotions");
+      const data = await res.json();
+
+      setPromotions(data);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load promotions.");
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -25,7 +43,7 @@ function PromotionsManagement() {
     setError("");
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     setSaved(false);
     setError("");
 
@@ -39,59 +57,81 @@ function PromotionsManagement() {
       return;
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const expiryDate = new Date(expiry);
-    if (Number.isNaN(expiryDate.getTime())) {
-      setError("Please enter a valid expiry date.");
-      return;
-    }
-
-    expiryDate.setHours(0, 0, 0, 0);
-
-    if (expiryDate < today) {
-      setError("Expiry date must be today or later.");
-      return;
-    }
-
     const percent = parseFloat(value.replace("%", ""));
-    if (Number.isNaN(percent) || percent <= 0) {
-      setError("Discount value must be a valid positive percentage, like 10%.");
+
+    if (Number.isNaN(percent) || percent <= 0 || percent > 100) {
+      setError("Discount value must be between 1 and 100.");
       return;
     }
 
-    const existingPromos =
-      JSON.parse(localStorage.getItem("promoCodes")) || [];
+    try {
+      const res = await fetch("http://localhost:5000/api/admin/promotions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          code,
+          expiry,
+          type,
+          value: percent,
+        }),
+      });
 
-    const exists = existingPromos.some(
-      (promo) => String(promo.code).trim().toLowerCase() === code
-    );
+      const data = await res.json();
 
-    if (exists) {
-      setError("Promo code already exists.");
-      return;
+      if (!res.ok) {
+        setError(data.message || "Failed to create promo code.");
+        return;
+      }
+
+      setPromotions((prev) => [data, ...prev]);
+      setSaved(true);
+
+      setForm({
+        code: "",
+        expiry: "",
+        type: "",
+        value: "",
+      });
+    } catch (err) {
+      console.error(err);
+      setError("Failed to create promo code.");
     }
+  };
 
-    const newPromo = {
-      code,
-      expiry,
-      type,
-      value: value.includes("%") ? value : `${value}%`,
-    };
+  const handleDelete = async (promotionId) => {
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/admin/promotions/${promotionId}`,
+        {
+          method: "DELETE",
+        }
+      );
 
-    localStorage.setItem(
-      "promoCodes",
-      JSON.stringify([...existingPromos, newPromo])
-    );
+      if (!res.ok) {
+        throw new Error("Failed to delete promotion");
+      }
 
-    setSaved(true);
-    setForm({
-      code: "",
-      expiry: "",
-      type: "",
-      value: "",
-    });
+      setPromotions((prev) =>
+        prev.filter((promo) => promo._id !== promotionId)
+      );
+
+      setSaved(false);
+      setError("");
+    } catch (err) {
+      console.error(err);
+      setError("Failed to delete promo code.");
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return "N/A";
+
+    return date.toLocaleDateString("en-GB");
   };
 
   return (
@@ -162,14 +202,53 @@ function PromotionsManagement() {
               )}
 
               {error && (
-                <span
-                  className="promo-saved-text"
-                  style={{ color: "#ff4d6d" }}
-                >
+                <span className="promo-saved-text" style={{ color: "#ff4d6d" }}>
                   {error}
                 </span>
               )}
             </div>
+          </div>
+
+          <div className="promo-panel" style={{ marginTop: "24px" }}>
+            <h2>Existing Promo Codes</h2>
+
+            {promotions.length > 0 ? (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Type</th>
+                    <th>Value</th>
+                    <th>Expiry</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {promotions.map((promo) => (
+                    <tr key={promo._id}>
+                      <td>{promo.code}</td>
+                      <td>{promo.type}</td>
+                      <td>{promo.value}%</td>
+                      <td>{formatDate(promo.expiry)}</td>
+                      <td>{promo.active ? "Active" : "Inactive"}</td>
+                      <td>
+                        <button
+                          className="promo-create-btn"
+                          style={{ background: "#ff4d6d" }}
+                          onClick={() => handleDelete(promo._id)}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p style={{ textAlign: "center" }}>No promo codes yet.</p>
+            )}
           </div>
         </div>
       </div>
