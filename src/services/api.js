@@ -2,7 +2,7 @@
 const API_URL = "http://localhost:5000/api";
 
 // Helper function to get auth token
-const getAuthToken = () => localStorage.getItem("token");
+export const getAuthToken = () => localStorage.getItem("token");
 
 // Helper function to set auth token
 export const setAuthToken = (token) => {
@@ -13,7 +13,7 @@ export const setAuthToken = (token) => {
   }
 };
 
-// Get current user
+// Get current user from localStorage
 export const getCurrentUser = () => {
   const user = localStorage.getItem("user");
   return user ? JSON.parse(user) : null;
@@ -23,6 +23,11 @@ export const getCurrentUser = () => {
 export const getCurrentUserId = () => {
   const user = getCurrentUser();
   return user?.id || user?._id || null;
+};
+
+// Save user to localStorage
+export const saveUser = (user) => {
+  localStorage.setItem("user", JSON.stringify(user));
 };
 
 // Generic fetch function with authentication
@@ -90,6 +95,27 @@ export const signin = async (email, password) => {
   return data;
 };
 
+// Get User Profile
+export const getUserProfile = async () => {
+  return authFetch("/auth/profile");
+};
+
+// Update User Profile
+export const updateUserProfile = async (profileData) => {
+  return authFetch("/auth/profile", {
+    method: "PUT",
+    body: JSON.stringify(profileData),
+  });
+};
+
+// Change Password
+export const changePassword = async (currentPassword, newPassword) => {
+  return authFetch("/auth/change-password", {
+    method: "PUT",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+};
+
 // Verify Token
 export const verifyToken = async () => {
   return authFetch("/auth/verify");
@@ -104,11 +130,17 @@ export const logout = async () => {
   } finally {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    localStorage.removeItem("currentUser");
   }
 };
 
-// Save user to localStorage
-export const saveUser = (user) => {
-  localStorage.setItem("user", JSON.stringify(user));
+// Get All Users (Admin only)
+export const getAllUsers = async () => {
+  return authFetch("/auth/users");
+};
+
+// Delete User (Admin only)
+export const deleteUser = async (userId) => {
+  return authFetch(`/auth/users/${userId}`, {
+    method: "DELETE",
+  });
 };

@@ -1,3 +1,4 @@
+// src/pages/Profile.jsx
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
@@ -5,47 +6,92 @@ import Input from "../components/Input";
 import Button from "../components/Button";
 import defaultProfileImage from "../assets/Profile .png";
 import billingCard from "../assets/Card.png";
+import { getCurrentUser, getAuthToken, updateUserProfile } from "../services/api";
 
 function Profile() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
-
-  const defaultProfileData = {
-    fullName: "User",
-    email: "user@gmail.com",
-    phone: "0512345678",
-    location: "KFUPM, Dhahran",
-  };
-
-  const [savedProfile, setSavedProfile] = useState(() => {
-    return JSON.parse(localStorage.getItem("profileData")) || defaultProfileData;
+  
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    address: "",
   });
-
-  const [formData, setFormData] = useState(() => {
-    return JSON.parse(localStorage.getItem("profileData")) || defaultProfileData;
-  });
-
-  const [savedImage, setSavedImage] = useState(() => {
-    return localStorage.getItem("profileImage") || defaultProfileImage;
-  });
-
   const [errors, setErrors] = useState({});
   const [savedMessage, setSavedMessage] = useState("");
   const [orders, setOrders] = useState([]);
   const [imageMessage, setImageMessage] = useState("");
+  const [savedImage, setSavedImage] = useState(() => {
+    return localStorage.getItem("profileImage") || defaultProfileImage;
+  });
 
+  // Fetch user data from backend
   useEffect(() => {
+    const fetchUserData = async () => {
+      const token = getAuthToken();
+      const currentUser = getCurrentUser();
+      
+      if (!token || !currentUser) {
+        navigate("/");
+        return;
+      }
+      
+      try {
+        // Fetch user profile from backend
+        const response = await fetch(`http://localhost:5000/api/auth/profile`, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData.user);
+          setFormData({
+            fullName: userData.user.fullName || "",
+            email: userData.user.email || "",
+            phone: userData.user.phone || "",
+            address: userData.user.address || "",
+          });
+        } else {
+          // Fallback to stored user data
+          setUser(currentUser);
+          setFormData({
+            fullName: currentUser.fullName || "",
+            email: currentUser.email || "",
+            phone: currentUser.phone || "",
+            address: currentUser.address || "",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        // Fallback to stored user data
+        setUser(currentUser);
+        setFormData({
+          fullName: currentUser.fullName || "",
+          email: currentUser.email || "",
+          phone: currentUser.phone || "",
+          address: currentUser.address || "",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchUserData();
+    
+    // Fetch orders
     const storedOrders = JSON.parse(localStorage.getItem("orders")) || [];
     setOrders(storedOrders);
-  }, []);
+  }, [navigate]);
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
-
     const date = new Date(dateString);
-
     if (Number.isNaN(date.getTime())) return dateString;
-
     return date.toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "short",
@@ -55,17 +101,14 @@ function Profile() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
-
     setErrors((prev) => ({
       ...prev,
       [name]: "",
     }));
-
     setSavedMessage("");
   };
 
@@ -74,37 +117,64 @@ function Profile() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!formData.fullName.trim()) {
-      newErrors.fullName = "Required fields must not be empty.";
-    }
-
-    if (!formData.phone.trim()) {
-      newErrors.phone = "Required fields must not be empty.";
+      newErrors.fullName = "Full name is required";
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = "Required fields must not be empty.";
+      newErrors.email = "Email is required";
     } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = "Email must be in valid format.";
+      newErrors.email = "Invalid email format";
+    }
+
+    if (formData.phone && !/^\d+$/.test(formData.phone)) {
+      newErrors.phone = "Phone must contain only numbers";
     }
 
     return newErrors;
   };
 
-  const handleSave = () => {
-  const validationErrors = validateForm();
+  const handleSave = async () => {
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      setSavedMessage("");
+      return;
+    }
 
-  if (Object.keys(validationErrors).length > 0) {
-    setErrors(validationErrors);
-    setSavedMessage("");
-    return;
-  }
+    const token = getAuthToken();
+    if (!token) {
+      alert("Please login again");
+      navigate("/");
+      return;
+    }
 
-  localStorage.setItem("profileData", JSON.stringify(formData));
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
 
-  setSavedProfile(formData);
-  setErrors({});
-  setSavedMessage("Saved !");
-  setImageMessage("");
+      if (response.ok) {
+        const updatedUser = await response.json();
+        setUser(updatedUser.user);
+        // Update localStorage
+        localStorage.setItem("user", JSON.stringify(updatedUser.user));
+        setSavedMessage("Profile updated successfully!");
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSavedMessage(""), 3000);
+      } else {
+        const error = await response.json();
+        setSavedMessage(error.message || "Failed to update profile");
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      setSavedMessage("Error updating profile");
+    }
   };
 
   const handleUploadClick = () => {
@@ -114,48 +184,55 @@ function Profile() {
   };
 
   const handleImageChange = (e) => {
-  const file = e.target.files?.[0];
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setImageMessage("Please choose a valid image file.");
+      return;
+    }
 
-  if (!file.type.startsWith("image/")) {
-    setImageMessage("Please choose a valid image file.");
-    return;
-  }
+    const maxSizeInBytes = 2 * 1024 * 1024;
+    if (file.size > maxSizeInBytes) {
+      setImageMessage("Image size must be less than 2MB.");
+      return;
+    }
 
-  const maxSizeInBytes = 2 * 1024 * 1024;
-  if (file.size > maxSizeInBytes) {
-    setImageMessage("Image size must be less than 2MB.");
-    return;
-  }
-
-  const reader = new FileReader();
-
-  reader.onloadend = () => {
-    const result = reader.result;
-    setSavedImage(result);
-    localStorage.setItem("profileImage", result);
-    setImageMessage("Profile picture updated.");
-    setSavedMessage("");
-  };
-
-  reader.readAsDataURL(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result;
+      setSavedImage(result);
+      localStorage.setItem("profileImage", result);
+      setImageMessage("Profile picture updated.");
+      setSavedMessage("");
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleRemoveImage = () => {
-  setSavedImage(defaultProfileImage);
-  localStorage.removeItem("profileImage");
-  setImageMessage("Profile picture removed.");
-  setSavedMessage("");
-
-  if (fileInputRef.current) {
-    fileInputRef.current.value = "";
-  }
+    setSavedImage(defaultProfileImage);
+    localStorage.removeItem("profileImage");
+    setImageMessage("Profile picture removed.");
+    setSavedMessage("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
-  const displayUsername = savedProfile.fullName
-    ? `@${savedProfile.fullName.replace(/\s+/g, "")}`
-    : "@Username123";
+  const displayUsername = formData.fullName
+    ? `@${formData.fullName.replace(/\s+/g, "")}`
+    : "@Username";
+
+  if (loading) {
+    return (
+      <div className="purple-page" style={{ minHeight: "100vh" }}>
+        <Navbar />
+        <div style={{ textAlign: "center", paddingTop: "200px" }}>
+          Loading profile...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="purple-page" style={{ minHeight: "100vh" }}>
@@ -201,11 +278,11 @@ function Profile() {
             alignItems: "start",
           }}
         >
+          {/* Left Sidebar - Profile Picture */}
           <div
             style={{
               background: "rgba(255,255,255,0.16)",
               backdropFilter: "blur(15px)",
-              WebkitBackdropFilter: "blur(15px)",
               border: "1px solid rgba(255,255,255,0.35)",
               borderRadius: "28px",
               padding: "34px 20px 18px",
@@ -258,7 +335,7 @@ function Profile() {
                   wordBreak: "break-word",
                 }}
               >
-                {savedProfile.email || "username123@gmail.com"}
+                {formData.email}
               </p>
             </div>
 
@@ -324,6 +401,7 @@ function Profile() {
             </div>
           </div>
 
+          {/* Right Side - Profile Form */}
           <div
             style={{
               display: "grid",
@@ -335,7 +413,6 @@ function Profile() {
               style={{
                 background: "rgba(255,255,255,0.16)",
                 backdropFilter: "blur(15px)",
-                WebkitBackdropFilter: "blur(15px)",
                 border: "1px solid rgba(255,255,255,0.35)",
                 borderRadius: "28px",
                 padding: "28px 32px 34px",
@@ -387,9 +464,9 @@ function Profile() {
                 />
 
                 <Input
-                  label="Location"
-                  name="location"
-                  value={formData.location}
+                  label="Address"
+                  name="address"
+                  value={formData.address}
                   onChange={handleChange}
                 />
               </div>
@@ -412,7 +489,7 @@ function Profile() {
                 {savedMessage && (
                   <span
                     style={{
-                      color: "#ff4d6d",
+                      color: savedMessage.includes("success") ? "#39a86f" : "#ff4d6d",
                       fontSize: "16px",
                       fontWeight: "600",
                     }}
@@ -423,6 +500,7 @@ function Profile() {
               </div>
             </div>
 
+            {/* Orders Section */}
             <div
               className="profile-bottom-grid"
               style={{
@@ -436,7 +514,6 @@ function Profile() {
                 style={{
                   background: "rgba(255,255,255,0.16)",
                   backdropFilter: "blur(15px)",
-                  WebkitBackdropFilter: "blur(15px)",
                   border: "1px solid rgba(255,255,255,0.35)",
                   borderRadius: "28px",
                   padding: "26px 32px 20px",
@@ -521,18 +598,8 @@ function Profile() {
                               </td>
 
                               <td style={{ padding: "18px 10px", color: "#374151" }}>
-                                  {`$${(
-                                    typeof order.total === "number"
-                                      ? order.total
-                                      : typeof order.subtotal === "number"
-                                      ? order.subtotal
-                                      : !Number.isNaN(Number(order.total))
-                                      ? Number(order.total)
-                                      : !Number.isNaN(Number(order.subtotal))
-                                      ? Number(order.subtotal)
-                                      : 0
-                                  ).toFixed(2)}`}
-                                </td>
+                                ${(order.total || order.subtotal || 0).toFixed(2)}
+                              </td>
 
                               <td style={{ padding: "18px 10px" }}>
                                 <span
@@ -578,11 +645,11 @@ function Profile() {
                 </div>
               </div>
 
+              {/* Billing Card */}
               <div
                 style={{
                   background: "rgba(255,255,255,0.16)",
                   backdropFilter: "blur(15px)",
-                  WebkitBackdropFilter: "blur(15px)",
                   border: "1px solid rgba(255,255,255,0.35)",
                   borderRadius: "28px",
                   padding: "26px 26px 20px",
@@ -607,23 +674,6 @@ function Profile() {
                   >
                     Billing Information
                   </h2>
-
-                  <div
-                    style={{
-                      width: "24px",
-                      height: "24px",
-                      borderRadius: "50%",
-                      background: "rgba(255,255,255,0.45)",
-                      color: "#6d5a8d",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontWeight: "700",
-                      fontSize: "16px",
-                    }}
-                  >
-                    +
-                  </div>
                 </div>
 
                 <img

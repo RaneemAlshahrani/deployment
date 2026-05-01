@@ -20,5 +20,5 @@ export const isAuthenticated = () => {
 export const logout = () => {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
-  localStorage.removeItem("currentUser"); // Remove old format too
+  localStorage.removeItem("currentUser");
 };

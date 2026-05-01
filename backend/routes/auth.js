@@ -1,9 +1,11 @@
+// backend/routes/auth.js
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { body, validationResult } = require("express-validator");
 const User = require("../models/User");
+const { authenticateToken } = require("../middleware/auth");
 
 // Secret key for JWT (store in .env for production)
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_key_change_this";
@@ -27,8 +29,7 @@ router.post(
     body("phone")
       .optional()
       .isMobilePhone()
-      .withMessage("Please enter a valid phone number")
-      .withMessage("Invalid phone number"),
+      .withMessage("Please enter a valid phone number"),
   ],
   async (req, res) => {
     // Check for validation errors
@@ -178,21 +179,149 @@ router.post(
   }
 );
 
-// ==================== VERIFY TOKEN (Check if user is authenticated) ====================
-router.get("/verify", async (req, res) => {
-  const token = req.headers.authorization?.split(" ")[1];
-
-  if (!token) {
-    return res.status(401).json({
+// ==================== GET USER PROFILE ====================
+router.get("/profile", authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select("-password");
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: "User not found" 
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone,
+        address: user.address,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      }
+    });
+  } catch (error) {
+    console.error("Get profile error:", error);
+    res.status(500).json({ 
       success: false,
-      message: "No token provided",
+      message: "Server error fetching profile" 
     });
   }
+});
 
+// ==================== UPDATE USER PROFILE ====================
+router.put("/profile", authenticateToken, async (req, res) => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findById(decoded.userId).select("-password");
+    const { fullName, phone, address } = req.body;
+    
+    // Build update object
+    const updateFields = {};
+    if (fullName !== undefined) updateFields.fullName = fullName;
+    if (phone !== undefined) updateFields.phone = phone;
+    if (address !== undefined) updateFields.address = address;
+    
+    // Update user
+    const user = await User.findByIdAndUpdate(
+      req.user.userId,
+      { $set: updateFields },
+      { new: true, runValidators: true }
+    ).select("-password");
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: "User not found" 
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone,
+        address: user.address,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Server error updating profile" 
+    });
+  }
+});
 
+// ==================== CHANGE PASSWORD ====================
+router.put(
+  "/change-password",
+  authenticateToken,
+  [
+    body("currentPassword").notEmpty().withMessage("Current password is required"),
+    body("newPassword").isLength({ min: 6 }).withMessage("New password must be at least 6 characters"),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array(),
+      });
+    }
+
+    try {
+      const { currentPassword, newPassword } = req.body;
+      
+      // Get user with password
+      const user = await User.findById(req.user.userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+      
+      // Verify current password
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          success: false,
+          message: "Current password is incorrect",
+        });
+      }
+      
+      // Hash new password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+      
+      // Update password
+      user.password = hashedPassword;
+      await user.save();
+      
+      res.status(200).json({
+        success: true,
+        message: "Password changed successfully",
+      });
+    } catch (error) {
+      console.error("Change password error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error changing password",
+      });
+    }
+  }
+);
+
+// ==================== VERIFY TOKEN ====================
+router.get("/verify", authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select("-password");
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -219,14 +348,79 @@ router.get("/verify", async (req, res) => {
   }
 });
 
-// ==================== LOGOUT (Client-side only, but useful for blacklisting) ====================
-router.post("/logout", async (req, res) => {
+// ==================== LOGOUT ====================
+router.post("/logout", authenticateToken, async (req, res) => {
   // For JWT, logout is handled client-side by removing the token
   // You can implement token blacklisting here if needed
   res.status(200).json({
     success: true,
     message: "Logout successful",
   });
+});
+
+// ==================== GET ALL USERS (Admin only) ====================
+router.get("/users", authenticateToken, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Admin only.",
+      });
+    }
+    
+    const users = await User.find().select("-password");
+    res.status(200).json({
+      success: true,
+      users,
+    });
+  } catch (error) {
+    console.error("Get users error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error fetching users",
+    });
+  }
+});
+
+// ==================== DELETE USER (Admin only) ====================
+router.delete("/users/:userId", authenticateToken, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Admin only.",
+      });
+    }
+    
+    // Don't allow deleting yourself
+    if (req.params.userId === req.user.userId) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot delete your own account",
+      });
+    }
+    
+    const user = await User.findByIdAndDelete(req.params.userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: "User deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete user error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error deleting user",
+    });
+  }
 });
 
 module.exports = router;
