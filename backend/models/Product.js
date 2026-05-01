@@ -31,8 +31,8 @@ const productSchema = new mongoose.Schema(
       default: "",
     },
     skinType: {
-      type: String,
-      default: "",
+      type: [String],
+      default: [],
     },
     ingredients: {
       type: [String],

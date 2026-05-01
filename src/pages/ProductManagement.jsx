@@ -112,7 +112,7 @@ function ProductManagement() {
 
   const handleEdit = (product) => {
     setFormData({
-      id: product.id,
+      id: product._id || product.id,
       name: product.name,
       description: product.description,
       price: product.price,
@@ -179,8 +179,15 @@ function ProductManagement() {
       // مهم: الصورة
       data.append("image", imageFile);
 
-      const response = await fetch("http://localhost:5000/api/products", {
-        method: "POST",
+      const url =
+        mode === "edit"
+          ? `http://localhost:5000/api/products/${formData.id}`
+          : "http://localhost:5000/api/products";
+
+      const method = mode === "edit" ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         body: data,
       });
 
