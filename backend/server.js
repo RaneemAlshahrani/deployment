@@ -14,6 +14,7 @@ const adminPromotionsRoutes = require("./routes/adminPromotions");
 const adminReviewsRoutes = require("./routes/adminReviews");
 
 const productRoutes = require("./routes/products");
+const orderRoutes = require("./routes/orders");
 
 const app = express(); 
 
