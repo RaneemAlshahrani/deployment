@@ -102,8 +102,11 @@ router.get("/dashboard", async (req, res) => {
       }
     }
 
-    const salesChartData = monthsToShow.map((month, index) => {
-      const found = monthlySales.find((m) => m._id === index + 1);
+    const salesChartData = monthsToShow.map((month) => {
+      const monthIndex = monthNames.indexOf(month) + 1;
+
+      const found = monthlySales.find((m) => m._id === monthIndex);
+
       return {
         month,
         sales: found ? found.sales : 0,

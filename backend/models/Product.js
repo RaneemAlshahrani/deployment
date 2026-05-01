@@ -6,6 +6,7 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      index: true,
     },
     price: {
       type: Number,
@@ -15,6 +16,7 @@ const productSchema = new mongoose.Schema(
     description: {
       type: String,
       required: true,
+      trim: true,
     },
     image: {
       type: String,
@@ -44,6 +46,7 @@ const productSchema = new mongoose.Schema(
     },
     theme: {
       type: String,
+      enum: ["pink", "purple", "yellow"],
       default: "pink",
     }
   },

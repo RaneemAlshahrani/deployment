@@ -5,9 +5,9 @@ const Product = require("../models/Product");
 // GET all inventory
 router.get("/", async (req, res) => {
   try {
-    const products = await Product.find().select(
-      "name stock price image"
-    );
+    const products = await Product.find()
+      .select("name stock price image")
+      .sort({ createdAt: -1 });
 
     res.status(200).json(products);
   } catch (error) {
@@ -20,7 +20,7 @@ router.put("/:id", async (req, res) => {
   try {
     const { stock } = req.body;
 
-    if (stock < 0) {
+    if (stock === undefined || Number(stock) < 0) {
       return res.status(400).json({
         message: "Stock cannot be negative",
       });

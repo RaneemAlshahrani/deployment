@@ -11,11 +11,18 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "Order must have items" });
     }
 
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    if (Number(totalPrice) < 0) {
+      return res.status(400).json({ message: "Invalid total price" });
+    }
+
     const order = new Order({
       userId,
       items,
-      totalPrice,
-      status: "Processing",
+      totalPrice: Number(totalPrice),
     });
 
     const savedOrder = await order.save();
@@ -29,7 +36,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// GET all orders
+// GET all orders (user/public)
 router.get("/", async (req, res) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 });
@@ -64,36 +71,6 @@ router.get("/:id", async (req, res) => {
     res.status(200).json(order);
   } catch (error) {
     res.status(400).json({ message: "Invalid order ID" });
-  }
-});
-
-// UPDATE order status
-router.put("/:id/status", async (req, res) => {
-  try {
-    const { status } = req.body;
-
-    const allowedStatuses = ["Processing", "Shipped", "Delivered", "Cancelled"];
-
-    if (!allowedStatuses.includes(status)) {
-      return res.status(400).json({ message: "Invalid order status" });
-    }
-
-    const updatedOrder = await Order.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
-
-    if (!updatedOrder) {
-      return res.status(404).json({ message: "Order not found" });
-    }
-
-    res.status(200).json(updatedOrder);
-  } catch (error) {
-    res.status(500).json({
-      message: "Failed to update order status",
-      error: error.message,
-    });
   }
 });
 

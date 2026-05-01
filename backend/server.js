@@ -9,11 +9,12 @@ const wishlistRoutes = require("./routes/wishlist");
 const adminRoutes = require("./routes/admin");
 const adminInventoryRoutes = require("./routes/adminInventory");
 const adminOrdersRoutes = require("./routes/adminOrders");
+const adminProductsRoutes = require("./routes/adminProducts");
+const adminPromotionsRoutes = require("./routes/adminPromotions");
+const adminReviewsRoutes = require("./routes/adminReviews");
 
 const productRoutes = require("./routes/products");
 const orderRoutes = require("./routes/orders");
-const promotionRoutes = require("./routes/promotions");
-const reviewRoutes = require("./routes/reviews");
 
 const app = express(); 
 
@@ -28,10 +29,11 @@ app.use("/api/custom-options", customOptionRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 
 app.use("/api/admin", adminRoutes);
+app.use("/api/admin/products", adminProductsRoutes);
 app.use("/api/admin/inventory", adminInventoryRoutes);
 app.use("/api/admin/orders", adminOrdersRoutes);
-app.use("/api/admin/promotions", promotionRoutes);
-app.use("/api/admin/reviews", reviewRoutes);
+app.use("/api/admin/promotions", adminPromotionsRoutes);
+app.use("/api/admin/reviews", adminReviewsRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend is working 🚀");
