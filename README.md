@@ -39,34 +39,71 @@ The system also includes an Admin dashboard and a Customer Service panel for man
 * JavaScript
 * HTML
 * CSS
-
----
+* Node.js
+* MongoDB
 
 ## How to Run the Project
 
+1. Install frontend dependencies:
 
-1. Install dependencies:
 ```bash
 npm install
 npm install recharts
 ```
 
-2. Run the project:
+2. Start the frontend:
 
 ```bash
 npm run dev
 ```
 
 3. Open in browser:
-   http://localhost:5173/ (or the port shown in the terminal)
 
-4. for secure password:
-
-```bash
-npm install bcryptjs jsonwebtoken
+```
+http://localhost:5173/
 ```
 
-If you get a permission error (execution policy issue), run:
+---
+
+4. Setup backend:
+
+Open a new terminal and run:
+
+```bash
+cd backend
+npm install
+npm install express mongoose cors dotenv multer bcryptjs jsonwebtoken express-validator
+```
+
+---
+
+5. Create `.env` file inside backend:
+
+```env
+MONGO_URL=mongodb+srv://USERNAME:PASSWORD@cluster.mongodb.net/Bubble?retryWrites=true&w=majority
+PORT=5000
+JWT_SECRET=bubble_secret_key_123
+```
+
+---
+
+6. Start backend server:
+
+```bash
+node server.js
+```
+
+---
+
+7. Test backend:
+
+```
+http://localhost:5000/
+```
+
+---
+
+8. If you get a permission error (execution policy issue), run:
 
 ```bash
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
