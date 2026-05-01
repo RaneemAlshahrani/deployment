@@ -6,6 +6,8 @@ const cartRoutes = require("./routes/cart");
 const customOptionRoutes = require("./routes/customOptions");
 const wishlistRoutes = require("./routes/wishlist");
 
+const adminRoutes = require("./routes/admin");
+
 const productRoutes = require("./routes/products");
 
 const app = express(); 
@@ -18,6 +20,8 @@ app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/custom-options", customOptionRoutes);
 app.use("/api/wishlist", wishlistRoutes);
+
+app.use("/api/admin", adminRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend is working 🚀");
