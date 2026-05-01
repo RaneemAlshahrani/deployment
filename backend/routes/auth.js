@@ -21,8 +21,7 @@ router.post(
       .withMessage("Full name must be at least 2 characters"),
     body("email")
       .isEmail()
-      .withMessage("Please enter a valid email")
-      .normalizeEmail(),
+      .withMessage("Please enter a valid email"),
     body("password")
       .isLength({ min: 6 })
       .withMessage("Password must be at least 6 characters"),
@@ -109,7 +108,9 @@ router.post(
 router.post(
   "/signin",
   [
-    body("email").isEmail().withMessage("Please enter a valid email"),
+   body("email")
+  .isEmail()
+  .withMessage("Please enter a valid email address"),
     body("password").notEmpty().withMessage("Password is required"),
   ],
   async (req, res) => {
