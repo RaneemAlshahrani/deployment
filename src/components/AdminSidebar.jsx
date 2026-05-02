@@ -42,7 +42,7 @@ function AdminNavbar() {
           justifyContent: "space-between",
           alignItems: "center",
           padding: "clamp(6px, 2vw, 10px) clamp(10px, 3vw, 22px)",
-          margin: "clamp(6px, 2vw, 16px) auto",
+          margin: "clamp(6px, 2vw, 20px) auto",
           maxWidth: "1000px",
           width: "90%",
           position: "fixed",
@@ -110,7 +110,7 @@ function AdminNavbar() {
           <button
             onClick={handleLogout}
             style={{
-              padding: "clamp(5px, 1.5vw, 10px) clamp(10px, 3vw, 20px)",
+              padding: "clamp(6px, 1.5vw, 10px) clamp(10px, 3vw, 20px)",
               borderRadius: "30px",
               border: "1px solid rgba(255,255,255,0.4)",
               background: "rgba(255,255,255,0.08)",
