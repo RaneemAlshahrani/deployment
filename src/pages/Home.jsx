@@ -4,7 +4,6 @@ import bubble7 from "../assets/bubble7.png";
 import bubble8 from "../assets/bubble8.png";
 import heart from "../assets/heart.png";
 import heartFilled from "../assets/heart-filled.png";
-import logo from "../assets/bubble-logo.png";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCurrentUserId } from "../utils/auth";
@@ -12,7 +11,7 @@ import { getCurrentUserId } from "../utils/auth";
 const slideAnimation = `
   @keyframes slideIn {
     from { opacity: 0; transform: translateY(30px) scale(0.96); }
-    to   { opacity: 1; transform: translateY(0px)  scale(1); }
+    to   { opacity: 1; transform: translateY(0px)  scale(1);    }
   }
 `;
 
@@ -32,126 +31,293 @@ function Home() {
 
   const product = products[currentIndex] || null;
 
-  const getThemeColors = (theme) => ({
-    background: "linear-gradient(135deg, #b45f69, #d8a0aa)",
-    buttonColor: "#b84a57",
-    buttonHover: "#9e3f4a",
-    secondaryButtonColor: "#d99aa5",
-    textColor: "#5a2d36",
-    accentColor: "#d99aa5",
-    dotActiveColor: "#8B3A52",
-    dotInactiveColor: "rgba(139,58,82,0.3)",
-    bubbleOpacity: 0.18,
-    navBackground: "rgba(216, 160, 170, 0.3)",
-    iconColor: "#5a2d36",
-    iconHoverColor: "#9e3f4a"
-  });
-
-  const themeColors = getThemeColors(product?.theme);
-
   useEffect(() => {
     fetch("http://localhost:5000/api/products")
-      .then(res => res.json())
-      .then(data => setProducts(data.filter(i => !i.isCustomizable)))
-      .catch(console.log);
+      .then((res) => res.json())
+      .then((data) => {
+        const normal = data.filter((item) => !item.isCustomizable);
+        setProducts(normal);
+      })
+      .catch((err) => console.log(err));
   }, []);
 
   useEffect(() => {
     if (products.length < 2) return;
     intervalRef.current = setInterval(() => {
-      setCurrentIndex(prev => (prev + 1) % products.length);
-      setAnimKey(k => k + 1);
+      setCurrentIndex((prev) => (prev + 1) % products.length);
+      setAnimKey((k) => k + 1);
     }, 5000);
     return () => clearInterval(intervalRef.current);
   }, [products]);
 
-  const handleAddToCart = async () => {
-    if (!isLoggedIn) return navigate("/");
+  useEffect(() => {
+    if (!userId || !product) return;
+
+    const checkWishlist = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/wishlist/${userId}`);
+        const data = await response.json();
+        setLiked(data.some((item) => item.productId?._id === product._id));
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    checkWishlist();
+    window.addEventListener("wishlistUpdated", checkWishlist);
+    return () => window.removeEventListener("wishlistUpdated", checkWishlist);
+  }, [userId, product]);
+
+  const handleWishlist = async () => {
+    if (!isLoggedIn) {
+      navigate("/");
+      return;
+    }
     if (!product) return;
 
     try {
-      await fetch("http://localhost:5000/api/cart", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-          userId,
-          productId: product._id,
-          quantity: 1
-        })
-      });
-
-      setCartMessage("Added to cart");
-      setTimeout(() => setCartMessage(""), 2000);
-    } catch {
-      alert("Failed to add product");
+      if (liked) {
+        const response = await fetch(`http://localhost:5000/api/wishlist/${userId}`);
+        const data = await response.json();
+        const wishlistItem = data.find((item) => item.productId?._id === product._id);
+        if (wishlistItem) {
+          await fetch(`http://localhost:5000/api/wishlist/${wishlistItem._id}`, {
+            method: "DELETE",
+          });
+        }
+        setLiked(false);
+      } else {
+        await fetch("http://localhost:5000/api/wishlist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: userId,
+            productId: product._id,
+            quantity: 1,
+          }),
+        });
+        setLiked(true);
+      }
+      window.dispatchEvent(new Event("wishlistUpdated"));
+    } catch (error) {
+      console.error(error);
+      alert("Failed to update wishlist");
     }
   };
 
+  const handleAddToCart = () => {
+    if (!isLoggedIn) {
+      navigate("/");
+      return;
+    }
+    if (!product) return;
+
+    let storedCart = JSON.parse(localStorage.getItem("cartItems")) || [];
+    const existingItem = storedCart.find((item) => item.id === product._id);
+
+    if (existingItem) {
+      storedCart = storedCart.map((item) =>
+        item.id === product._id
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      );
+    } else {
+      storedCart.push({ id: product._id, quantity: 1 });
+    }
+
+    localStorage.setItem("cartItems", JSON.stringify(storedCart));
+    setCartMessage("Added to cart");
+    setTimeout(() => setCartMessage(""), 2000);
+  };
+
   const handleMoreDetails = () => {
-    if (!isLoggedIn) return navigate("/");
+    if (!isLoggedIn) {
+      navigate("/");
+      return;
+    }
     if (!product) return;
     navigate(`/product-details/${product._id}`);
   };
 
+  const goTo = (index) => {
+    clearInterval(intervalRef.current);
+    setCurrentIndex(index);
+    setAnimKey((k) => k + 1);
+    intervalRef.current = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % products.length);
+      setAnimKey((k) => k + 1);
+    }, 5000);
+  };
+
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: themeColors.background,
-      position: "relative",
-      overflow: "hidden"
-    }}>
+    <div
+      className="pink-page"
+      style={{
+        minHeight: "100vh",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
       <style>{slideAnimation}</style>
 
-      {/* Custom Navbar */}
-      <nav style={{
-        position: "fixed",
-        top: "20px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        width: "90%",
-        maxWidth: "1000px",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "10px 22px",
-        background: themeColors.navBackground,
-        backdropFilter: "blur(12px)",
-        borderRadius: "30px",
-        zIndex: 100
-      }}>
-        <img src={logo} style={{ width: "95px", cursor: "pointer" }} onClick={() => navigate("/home")} />
-      </nav>
+      {/* ✅ Fixed Navbar */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          zIndex: 1000,
+        }}
+      >
+        <Navbar />
+      </div>
 
-      {/* Product */}
-      <div style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        marginTop: "120px"
-      }}>
-        {product?.image && (
+      {/* Background bubbles */}
+      <img
+        src={bubble7}
+        alt="bubble left"
+        style={{
+          position: "absolute",
+          left: "5px",
+          bottom: "20px",
+          width: "35vw",
+          maxWidth: "500px",
+          opacity: 0.9,
+          zIndex: 0,
+          pointerEvents: "none",
+        }}
+      />
+      <img
+        src={bubble8}
+        alt="bubble right"
+        style={{
+          position: "absolute",
+          right: "2px",
+          top: "20px",
+          width: "35vw",
+          maxWidth: "500px",
+          opacity: 0.9,
+          zIndex: 0,
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Main content */}
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingTop: "40px",
+          marginTop: "80px", // 👈 space for fixed navbar
+          position: "relative",
+          zIndex: 2,
+        }}
+      >
+        {product && (
           <img
             key={animKey}
             src={product.image}
+            alt={product.name}
             style={{
               width: "90%",
               maxWidth: "560px",
-              animation: "slideIn 0.6s ease"
+              filter: "drop-shadow(0px 20px 40px rgba(0,0,0,0.18))",
+              marginBottom: "10px",
+              pointerEvents: "none",
+              animation: "slideIn 0.6s cubic-bezier(0.22,1,0.36,1) both",
             }}
           />
         )}
 
         {/* Buttons */}
-        <div style={{
-          display: "flex",
-          gap: "12px",
-          position: "absolute",
-          bottom: isMobile ? "40px" : "80px"
-        }}>
-          <Button text="Add to Cart" onClick={handleAddToCart} />
-          <Button text="More Details" onClick={handleMoreDetails} />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            position: "absolute",
+            bottom: isMobile ? "40px" : "80px",
+          }}
+        >
+          <div
+            style={{
+              position: "relative",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <Button text="Add to Cart" variant="primary" onClick={handleAddToCart} />
+            {cartMessage && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: "110%",
+                  color: "#226944",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {cartMessage}
+              </span>
+            )}
+          </div>
+
+          <Button text="More Details" variant="secondary" onClick={handleMoreDetails} />
+
+          <img
+            src={liked ? heartFilled : heart}
+            alt="wishlist"
+            onClick={handleWishlist}
+            style={{
+              width: "22px",
+              height: "22px",
+              cursor: "pointer",
+              transition: "0.3s",
+              transform: liked ? "scale(1.2)" : "scale(1)",
+              opacity: liked ? 1 : 0.7,
+            }}
+          />
         </div>
+
+        {/* Dots */}
+        {products.length > 1 && (
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              position: "absolute",
+              bottom: isMobile ? "10px" : "40px",
+            }}
+          >
+            {products.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => goTo(i)}
+                style={{
+                  width: i === currentIndex ? "24px" : "8px",
+                  height: "8px",
+                  borderRadius: "4px",
+                  border: "none",
+                  background:
+                    i === currentIndex
+                      ? "#8B3A52"
+                      : "rgba(139,58,82,0.3)",
+                  cursor: "pointer",
+                  padding: 0,
+                  transition: "all 0.3s ease",
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
