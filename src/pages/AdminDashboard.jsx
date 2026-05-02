@@ -9,6 +9,13 @@ import { formatSAR } from "../utils/currency";
 import { useTheme } from "../context/ThemeContext";
 
 function AdminDashboard() {
+const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+useEffect(() => {
+  const handleResize = () => setIsMobile(window.innerWidth < 768);
+  window.addEventListener("resize", handleResize);
+  return () => window.removeEventListener("resize", handleResize);
+}, []); 
   const { themeData } = useTheme();
   const [dashboardData, setDashboardData] = useState(null);
   const [salesFilter, setSalesFilter] = useState("all");
@@ -47,11 +54,21 @@ function AdminDashboard() {
   }
 
   return (
-    <div style={{ display: "grid", gap: "20px" }}>
-      {/* Stats Cards */}
+        <div style={{
+          display: "grid",
+          gap: "20px",
+          width: "100%",
+          maxWidth: "1000px",
+          margin: "0 auto",
+          marginTop: "100px",
+          padding: isMobile ? "0 10px" : "0"
+        }}>
+        {/* Stats Cards */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+        gridTemplateColumns: isMobile
+        ? "1fr 1fr"
+        : "repeat(auto-fit, minmax(200px, 1fr))",
         gap: "16px",
       }}>
         <StatCard title="Total Sales" value={formatSAR(totalSales)} bg={themeData.primary} />
@@ -65,7 +82,7 @@ function AdminDashboard() {
         background: themeData.cardBg,
         border: `1px solid ${themeData.borderColor}`,
         borderRadius: "20px",
-        padding: "20px",
+        padding: isMobile ? "12px" : "20px"
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
           <h2 style={{ margin: 0, fontSize: "20px", color: themeData.textColor }}>Sales Overview</h2>
@@ -80,7 +97,7 @@ function AdminDashboard() {
             <option value="last3">Last 3 Months</option>
           </select>
         </div>
-        <div style={{ width: "100%", height: "300px" }}>
+        <div style={{ width: "100%", height: isMobile ? "220px" : "300px" }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={salesChartData}>
               <XAxis dataKey="month" />
@@ -95,20 +112,21 @@ function AdminDashboard() {
       {/* Recent Orders & Top Products */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: "1fr 1fr",
+        gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
         gap: "16px",
       }}>
         <div style={{
           background: themeData.cardBg,
           border: `1px solid ${themeData.borderColor}`,
           borderRadius: "20px",
-          padding: "20px",
+          padding: isMobile ? "12px" : "20px"
         }}>
-          <h2 style={{ margin: "0 0 16px", fontSize: "20px", color: themeData.textColor }}>Recent Orders</h2>
+          <h2 style={{ margin: "0 0 16px", fontSize: isMobile ? "16px" : "20px", color: themeData.textColor }}>Recent Orders</h2>
           {recentOrders.slice(0, 5).map((order) => (
             <div key={order._id} style={{
-              display: "flex",
-              justifyContent: "space-between",
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr",
+              gap: "6px",
               padding: "10px 0",
               borderBottom: "1px solid rgba(255,255,255,0.1)",
             }}>
@@ -123,7 +141,7 @@ function AdminDashboard() {
           background: themeData.cardBg,
           border: `1px solid ${themeData.borderColor}`,
           borderRadius: "20px",
-          padding: "20px",
+          padding: isMobile ? "12px" : "20px"
         }}>
           <h2 style={{ margin: "0 0 16px", fontSize: "20px", color: themeData.textColor }}>Top Products</h2>
           {topProducts.slice(0, 5).map((product, idx) => (
@@ -133,7 +151,15 @@ function AdminDashboard() {
               padding: "10px 0",
               borderBottom: "1px solid rgba(255,255,255,0.1)",
             }}>
-              <span style={{ color: themeData.textLight }}>{product.name || "Product"}</span>
+              <span style={{
+                color: themeData.textLight,
+                maxWidth: "70%",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
+              }}>
+                {product.name || "Product"}
+              </span>
               <span style={{ color: themeData.primary, fontWeight: "bold" }}>Sold: {product.quantity || 0}</span>
             </div>
           ))}

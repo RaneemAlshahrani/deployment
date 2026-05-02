@@ -1,4 +1,3 @@
-// frontend/src/components/Navbar.jsx
 import { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { getCurrentUser, logout } from "../services/api";
@@ -7,8 +6,10 @@ import { CartIcon, ProfileIcon, MenuIcon, CloseIcon, LogoutIcon } from "./Dynami
 import logo from "../assets/bubble-logo.png";
 
 function Navbar() {
+  const [adminOpen, setAdminOpen] = useState(false); // ✅ added
   const [isMobile, setIsMobile] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
   const navigate = useNavigate();
   const currentUser = getCurrentUser();
   const { themeData } = useTheme();
@@ -29,18 +30,15 @@ function Navbar() {
     return () => media.removeEventListener("change", handleChange);
   }, []);
 
+  // ✅ keep ONLY normal links
   const links = [
     { name: "Home", path: "/home" },
     { name: "Products", path: "/products" },
     { name: "Contact Us", path: "/contact" },
   ];
-
-  if (currentUser?.role === "admin") {
-    links.push({ name: "Admin", path: "/admin-dashboard" });
-  } else if (currentUser?.role === "customer-service") {
-    links.push({ name: "Support", path: "/customer-service/tickets" });
-  }
-
+if (currentUser?.role === "customer-service") {
+  links.push({ name: "Support", path: "/customer-service/tickets" });
+}
   return (
     <>
       <nav
@@ -102,6 +100,11 @@ function Navbar() {
                 {link.name}
               </NavLink>
             ))}
+
+            {/* ✅ Admin only as normal link on desktop */}
+            {currentUser?.role === "admin" && (
+              <NavLink to="/admin-dashboard">Admin</NavLink>
+            )}
           </div>
         )}
 
@@ -115,13 +118,9 @@ function Navbar() {
             </div>
           )}
 
-          {/* Cart Icon */}
           <CartIcon size={22} onClick={() => navigate("/cart")} />
-
-          {/* Profile Icon */}
           <ProfileIcon size={24} onClick={() => navigate("/profile")} />
 
-          {/* Logout Button with Icon */}
           <button
             onClick={handleLogout}
             style={{
@@ -139,12 +138,6 @@ function Navbar() {
               cursor: "pointer",
               transition: "all 0.3s ease",
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.16)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-            }}
           >
             <LogoutIcon size={16} />
             <span>Logout</span>
@@ -152,7 +145,7 @@ function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile dropdown */}
+      {/* ✅ MOBILE DROPDOWN */}
       {isMobile && menuOpen && (
         <div
           style={{
@@ -173,6 +166,7 @@ function Navbar() {
             border: `1px solid ${themeData.borderColor}`,
           }}
         >
+          {/* Normal links */}
           {links.map((link) => (
             <NavLink
               key={link.name}
@@ -190,6 +184,29 @@ function Navbar() {
               {link.name}
             </NavLink>
           ))}
+
+          {/* ✅ Admin expandable (ONLY change) */}
+          {currentUser?.role === "admin" && (
+            <>
+              <div
+                onClick={() => setAdminOpen(!adminOpen)}
+                style={{ padding: "8px", cursor: "pointer", fontWeight: "600" }}
+              >
+                Admin {adminOpen ? "▲" : "▼"}
+              </div>
+
+              {adminOpen && (
+                <div style={{ paddingLeft: "10px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div onClick={() => navigate("/admin-dashboard")} style={{ cursor: "pointer", padding: "6px 0" }}>Dashboard</div>
+                  <div onClick={() => navigate("/admin/products")} style={{ cursor: "pointer", padding: "6px 0" }}>Products</div>
+                  <div onClick={() => navigate("/admin/inventory")} style={{ cursor: "pointer", padding: "6px 0" }}>Inventory</div>
+                  <div onClick={() => navigate("/admin/orders")} style={{ cursor: "pointer", padding: "6px 0" }}>Orders</div>
+                  <div onClick={() => navigate("/admin/reviews")} style={{ cursor: "pointer", padding: "6px 0" }}>Reviews</div>
+                  <div onClick={() => navigate("/admin/promotions")} style={{ cursor: "pointer", padding: "6px 0" }}>Promotions</div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
     </>

@@ -4,6 +4,8 @@ import logo from "../assets/bubble-logo.png";
 import { useTheme } from "../context/ThemeContext";
 
 function AdminSidebar() {
+  const isMobile = window.innerWidth < 768;
+  if (isMobile) return null;
   const navigate = useNavigate();
   const location = useLocation();
   const { themeData } = useTheme();
