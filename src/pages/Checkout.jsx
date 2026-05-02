@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Button from "../components/Button";
 import soap from "../assets/soap-bliss.png";
 import bubble8 from "../assets/bubble8.png";
-import { getCurrentUserId } from "../utils/auth";
+import { getCurrentUserId, getCurrentUser, getAuthToken } from "../utils/auth";
 
 function Checkout() {
   const navigate = useNavigate();
@@ -16,6 +16,7 @@ function Checkout() {
   const [discountMessage, setDiscountMessage] = useState("");
   const [discountError, setDiscountError] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const [form, setForm] = useState({
     fullName: "",
@@ -25,24 +26,72 @@ function Checkout() {
   });
 
   const [formError, setFormError] = useState("");
-  const [emailError, setEmailError] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
   const [orderMessage, setOrderMessage] = useState("");
   const [orderError, setOrderError] = useState("");
   const [locationLoading, setLocationLoading] = useState(false);
 
+  // Load profile data from backend
   useEffect(() => {
-    const savedProfile =
-      JSON.parse(localStorage.getItem("checkoutProfile")) ||
-      JSON.parse(localStorage.getItem("profileData")) || {
-        fullName: "",
-        email: "",
-        phone: "",
-        location: "",
-      };
+    const loadProfileData = async () => {
+      const token = getAuthToken();
+      const currentUser = getCurrentUser();
+      
+      if (token && currentUser) {
+        try {
+          const response = await fetch(`http://localhost:5000/api/auth/profile`, {
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            const userData = await response.json();
+            setForm({
+              fullName: userData.user.fullName || "",
+              email: userData.user.email || "",
+              phone: userData.user.phone || "",
+              location: userData.user.address || "",
+            });
+          } else {
+            const savedProfile =
+              JSON.parse(localStorage.getItem("checkoutProfile")) ||
+              JSON.parse(localStorage.getItem("profileData")) || {
+                fullName: currentUser.fullName || "",
+                email: currentUser.email || "",
+                phone: currentUser.phone || "",
+                location: currentUser.address || "",
+              };
+            setForm(savedProfile);
+          }
+        } catch (error) {
+          console.error("Error loading profile:", error);
+          const savedProfile =
+            JSON.parse(localStorage.getItem("checkoutProfile")) ||
+            JSON.parse(localStorage.getItem("profileData")) || {
+              fullName: currentUser.fullName || "",
+              email: currentUser.email || "",
+              phone: currentUser.phone || "",
+              location: currentUser.address || "",
+            };
+          setForm(savedProfile);
+        }
+      } else {
+        const savedProfile =
+          JSON.parse(localStorage.getItem("checkoutProfile")) ||
+          JSON.parse(localStorage.getItem("profileData")) || {
+            fullName: "",
+            email: "",
+            phone: "",
+            location: "",
+          };
+        setForm(savedProfile);
+      }
+      setLoading(false);
+    };
 
-    setForm(savedProfile);
+    loadProfileData();
   }, []);
 
   useEffect(() => {
@@ -144,7 +193,10 @@ function Checkout() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
+    
+    // Don't allow email to be changed
+    if (name === "email") return;
+    
     setForm((prev) => ({
       ...prev,
       [name]: value,
@@ -153,16 +205,6 @@ function Checkout() {
     setSaveMessage("");
     setFormError("");
     setOrderError("");
-
-    if (name === "email") {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-      if (value && !emailRegex.test(value)) {
-        setEmailError("Invalid email address");
-      } else {
-        setEmailError("");
-      }
-    }
 
     if (name === "phone") {
       const phoneRegex = /^\d{10}$/;
@@ -209,17 +251,10 @@ function Checkout() {
   const handleSave = () => {
     setSaveMessage("");
     setFormError("");
-    setEmailError("");
     setPhoneError("");
 
     if (!form.fullName || !form.email || !form.phone || !form.location) {
       setFormError("Please fill all shipping information");
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(form.email)) {
-      setEmailError("Invalid email address");
       return;
     }
 
@@ -248,7 +283,6 @@ function Checkout() {
     setOrderMessage("");
     setOrderError("");
     setFormError("");
-    setEmailError("");
     setPhoneError("");
 
     if (!userId) {
@@ -263,12 +297,6 @@ function Checkout() {
 
     if (!form.fullName || !form.email || !form.phone || !form.location) {
       setFormError("Please fill all shipping information");
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(form.email)) {
-      setEmailError("Invalid email address");
       return;
     }
 
@@ -317,6 +345,14 @@ function Checkout() {
       setOrderError("Failed to place order");
     }
   };
+
+  if (loading) {
+    return (
+      <div className="purple-page" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>Loading your information...</div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -572,6 +608,7 @@ function Checkout() {
                 gap: "22px 28px",
               }}
             >
+              {/* Full Name - Editable */}
               <div>
                 <label style={labelStyle}>Full Name</label>
                 <input
@@ -584,21 +621,30 @@ function Checkout() {
                 />
               </div>
 
+              {/* Email - Read Only (NOT Editable) */}
               <div>
                 <label style={labelStyle}>Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="username123@gmail.com"
-                  value={form.email}
-                  onChange={handleChange}
-                  style={inputStyleWide}
-                />
-                {emailError && (
-                  <p style={{ ...errorStyle, marginTop: "6px" }}>{emailError}</p>
-                )}
+                <div
+                  style={{
+                    width: "100%",
+                    padding: "12px 14px",
+                    borderRadius: "10px",
+                    border: "1px solid #e0e0e0",
+                    backgroundColor: "#f5f5f5",
+                    fontSize: "14px",
+                    fontFamily: "Josefin Sans, sans-serif",
+                    boxSizing: "border-box",
+                    color: "#666",
+                    cursor: "not-allowed",
+                    wordBreak: "break-all",
+                    overflowWrap: "break-word",
+                  }}
+                >
+                  {form.email || "No email set"}
+                </div>
               </div>
 
+              {/* Phone Number - Editable */}
               <div>
                 <label style={labelStyle}>Phone Number</label>
                 <input
@@ -614,6 +660,7 @@ function Checkout() {
                 )}
               </div>
 
+              {/* Location - Editable with GPS */}
               <div>
                 <label style={labelStyle}>Location</label>
                 <div style={{ position: "relative" }}>

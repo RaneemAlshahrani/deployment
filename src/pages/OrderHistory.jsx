@@ -1,27 +1,67 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import profileImage from "../assets/Profile .png";
+import { getCurrentUser, getAuthToken } from "../utils/auth";
 
 function OrderHistory() {
   const navigate = useNavigate();
 
-  const [profileData, setProfileData] = useState(() => {
-    const savedProfile = JSON.parse(localStorage.getItem("profileData"));
-
-    return (
-      savedProfile || {
-        fullName: "Username123",
-        email: "username123@gmail.com",
-      }
-    );
+  const [profileData, setProfileData] = useState({
+    fullName: "",
+    email: "",
   });
-
   const [profileImageSrc, setProfileImageSrc] = useState(() => {
     return localStorage.getItem("profileImage") || profileImage;
   });
-
   const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  // Load profile data from backend
+  useEffect(() => {
+    const loadProfileData = async () => {
+      const token = getAuthToken();
+      const currentUser = getCurrentUser();
+      
+      if (token && currentUser) {
+        try {
+          const response = await fetch(`http://localhost:5000/api/auth/profile`, {
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            const userData = await response.json();
+            setProfileData({
+              fullName: userData.user.fullName || "User",
+              email: userData.user.email || "user@example.com",
+            });
+          } else {
+            setProfileData({
+              fullName: currentUser.fullName || "User",
+              email: currentUser.email || "user@example.com",
+            });
+          }
+        } catch (error) {
+          console.error("Error loading profile:", error);
+          setProfileData({
+            fullName: currentUser.fullName || "User",
+            email: currentUser.email || "user@example.com",
+          });
+        }
+      } else if (currentUser) {
+        setProfileData({
+          fullName: currentUser.fullName || "User",
+          email: currentUser.email || "user@example.com",
+        });
+      }
+      setLoading(false);
+    };
+
+    loadProfileData();
+  }, []);
+
+  // Load orders from localStorage
   useEffect(() => {
     const storedOrders = JSON.parse(localStorage.getItem("orders")) || [];
     setOrders(storedOrders);
@@ -43,7 +83,29 @@ function OrderHistory() {
 
   const displayUsername = profileData.fullName
     ? `@${profileData.fullName.replace(/\s+/g, "")}`
-    : "@Username123";
+    : "@User";
+
+  if (loading) {
+    return (
+      <div className="purple-page" style={{ minHeight: "100vh" }}>
+        <div
+          style={{
+            position: "relative",
+            zIndex: 1,
+            width: "92%",
+            maxWidth: "1280px",
+            margin: "0 auto",
+            paddingTop: "24px",
+            paddingBottom: "30px",
+            textAlign: "center",
+            paddingTop: "200px",
+          }}
+        >
+          Loading...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="purple-page" style={{ minHeight: "100vh" }}>
@@ -86,6 +148,7 @@ function OrderHistory() {
             alignItems: "start",
           }}
         >
+          {/* Profile Sidebar */}
           <div
             style={{
               background: "rgba(255,255,255,0.12)",
@@ -131,18 +194,23 @@ function OrderHistory() {
               {displayUsername}
             </h2>
 
-            <p
+            {/* Email - Display as text, NOT editable */}
+            <div
               style={{
-                margin: 0,
-                color: "#4b5563",
+                display: "inline-block",
+                padding: "6px 12px",
+                borderRadius: "8px",
+                backgroundColor: "rgba(255,255,255,0.2)",
                 fontSize: "13px",
-                wordBreak: "break-word",
+                color: "#4b5563",
+                wordBreak: "break-all",
               }}
             >
-              {profileData.email || "username123@gmail.com"}
-            </p>
+              {profileData.email}
+            </div>
           </div>
 
+          {/* Orders Section */}
           <div
             style={{
               background: "rgba(255,255,255,0.12)",
@@ -196,79 +264,79 @@ function OrderHistory() {
                     <th style={{ padding: "14px 10px", fontSize: "14px" }}>Status</th>
                   </tr>
                 </thead>
-                  <tbody>
-                    {orders.length > 0 ? (
-                      orders.map((order, index) => {
-                        const itemNames =
-                          order.items && order.items.length > 0
-                            ? order.items.map((item) => item.item).join(", ")
-                            : order.item || order.name || "Unknown Item";
+                <tbody>
+                  {orders.length > 0 ? (
+                    orders.map((order, index) => {
+                      const itemNames =
+                        order.items && order.items.length > 0
+                          ? order.items.map((item) => item.item).join(", ")
+                          : order.item || order.name || "Unknown Item";
 
-                        return (
-                          <tr
-                            key={order.id || index}
-                            style={{
-                              borderTop: "1px solid rgba(255,255,255,0.35)",
-                            }}
-                          >
-                            <td style={{ padding: "18px 10px", color: "#374151" }}>
-                              {order.id || `#${1000 + index}`}
-                            </td>
-
-                            <td style={{ padding: "18px 10px", color: "#374151" }}>
-                              {formatDate(order.date)}
-                            </td>
-
-                            <td style={{ padding: "18px 10px", color: "#374151" }}>
-                              {itemNames}
-                            </td>
-
-                            <td style={{ padding: "18px 10px", color: "#374151" }}>
-                              {`$${(
-                                typeof order.total === "number"
-                                  ? order.total
-                                  : typeof order.subtotal === "number"
-                                  ? order.subtotal
-                                  : !Number.isNaN(Number(order.total))
-                                  ? Number(order.total)
-                                  : !Number.isNaN(Number(order.subtotal))
-                                  ? Number(order.subtotal)
-                                  : 0
-                              ).toFixed(2)}`}
-                            </td>
-
-                            <td style={{ padding: "18px 10px" }}>
-                              <span
-                                style={{
-                                  background: "#b99af1",
-                                  color: "#5b2fb2",
-                                  padding: "6px 12px",
-                                  borderRadius: "10px",
-                                  fontSize: "12px",
-                                  fontWeight: "600",
-                                }}
-                              >
-                                {order.status || "Pending"}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan="5"
+                      return (
+                        <tr
+                          key={order.id || index}
                           style={{
-                            padding: "24px 10px",
-                            textAlign: "center",
-                            color: "#4b5563",
+                            borderTop: "1px solid rgba(255,255,255,0.35)",
                           }}
                         >
-                          No orders found.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
+                          <td style={{ padding: "18px 10px", color: "#374151" }}>
+                            {order.id || `#${1000 + index}`}
+                          </td>
+
+                          <td style={{ padding: "18px 10px", color: "#374151" }}>
+                            {formatDate(order.date)}
+                          </td>
+
+                          <td style={{ padding: "18px 10px", color: "#374151" }}>
+                            {itemNames}
+                          </td>
+
+                          <td style={{ padding: "18px 10px", color: "#374151" }}>
+                            {`$${(
+                              typeof order.total === "number"
+                                ? order.total
+                                : typeof order.subtotal === "number"
+                                ? order.subtotal
+                                : !Number.isNaN(Number(order.total))
+                                ? Number(order.total)
+                                : !Number.isNaN(Number(order.subtotal))
+                                ? Number(order.subtotal)
+                                : 0
+                            ).toFixed(2)}`}
+                          </td>
+
+                          <td style={{ padding: "18px 10px" }}>
+                            <span
+                              style={{
+                                background: "#b99af1",
+                                color: "#5b2fb2",
+                                padding: "6px 12px",
+                                borderRadius: "10px",
+                                fontSize: "12px",
+                                fontWeight: "600",
+                              }}
+                            >
+                              {order.status || "Pending"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan="5"
+                        style={{
+                          padding: "24px 10px",
+                          textAlign: "center",
+                          color: "#4b5563",
+                        }}
+                      >
+                        No orders found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
               </table>
             </div>
           </div>
