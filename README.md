@@ -244,6 +244,143 @@ node create-all-users.js
 
 ---
 
+## Testing Notes (Common Mistakes)
+
+### 1. 401 Unauthorized (Orders / Protected APIs)
+
+If you get:
+```txt
+401 Unauthorized
+````
+
+You forgot the token.
+
+Fix: 
+
+1. Login:
+
+```http
+POST /api/auth/signin
+```
+
+2. Add header:
+
+```txt
+Authorization: Bearer YOUR_TOKEN
+```
+
+---
+
+### 2. Wrong ID (404 or 500 errors)
+
+If you get:
+
+```txt
+404 Not Found
+or
+500 Failed to update
+```
+
+You used a wrong ID.
+
+Wrong: 
+
+```txt
+5a71ce3b
+```
+
+Fix: 
+
+```http
+GET /api/admin/products
+GET /api/admin/orders
+```
+
+Then use real `_id`:
+
+```txt
+69f632b4d5c2385312f3182b
+```
+
+---
+
+### 3. Inventory Update Not Working
+
+If this fails:
+
+```http
+PUT /api/admin/inventory/:id
+```
+
+You used wrong ID.
+
+Fix: 
+
+```http
+GET /api/admin/products
+```
+
+Then:
+
+```http
+PUT /api/admin/inventory/PRODUCT_ID
+```
+
+---
+
+### 4. Order Status Update Not Working
+
+If this fails:
+
+```http
+PUT /api/admin/orders/:id/status
+```
+
+Fix: 
+
+```http
+GET /api/admin/orders
+```
+
+Then:
+
+```http
+PUT /api/admin/orders/ORDER_ID/status
+```
+
+---
+
+### 5. Cart Empty in Checkout
+
+If checkout is empty:
+
+Fix: 
+
+```http
+GET /api/cart/:userId
+```
+
+Make sure:
+
+* cart has items
+* same userId is used
+
+---
+
+### 6. Discount Not Working
+
+If discount fails:
+
+Fix: 
+
+```http
+POST /api/admin/promotions
+```
+
+Create promotion first.
+
+---
+
 ## Frontend Routing Overview
 
 | Role             | Page                 | Route                       |

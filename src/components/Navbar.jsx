@@ -99,7 +99,52 @@ function Navbar() {
                 {link.name}
               </NavLink>
             ))}
+            {currentUser?.role === "customer-service" && (
+              <div style={{ position: "relative" }}>
+                <div
+                  onClick={() => setSupportOpen(!supportOpen)}
+                  style={{
+                    cursor: "pointer",
+                    fontWeight: "600",
+                    color: "#2e3d4c"
+                  }}
+                >
+                  Support ▼
+                </div>
 
+                {supportOpen && (
+                  <div style={{
+                    position: "absolute",
+                    top: "35px",
+                    left: 0,
+                    background: "rgba(255,255,255,0.95)",
+                    backdropFilter: "blur(10px)",
+                    borderRadius: "12px",
+                    padding: "10px",
+                    boxShadow: "0 8px 20px rgba(0,0,0,0.1)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                    minWidth: "140px",
+                    zIndex: 1000,
+                  }}>
+                    <div
+                      onClick={() => navigate("/customer-service/tickets")}
+                      style={{ cursor: "pointer", padding: "6px 10px" }}
+                    >
+                      Tickets
+                    </div>
+
+                    <div
+                      onClick={() => navigate("/customer-service/faqs")}
+                      style={{ cursor: "pointer", padding: "6px 10px" }}
+                    >
+                      FAQs
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             {/* ✅ Admin only as normal link on desktop */}
             {currentUser?.role === "admin" && (
               <NavLink to="/admin-dashboard">Admin</NavLink>

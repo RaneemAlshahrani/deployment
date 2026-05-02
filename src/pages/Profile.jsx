@@ -11,7 +11,13 @@ import { formatSAR } from "../utils/currency";
 function Profile() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
-  
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+useEffect(() => {
+  const handleResize = () => setIsMobile(window.innerWidth < 768);
+  window.addEventListener("resize", handleResize);
+  return () => window.removeEventListener("resize", handleResize);
+}, []);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -242,9 +248,10 @@ function Profile() {
           zIndex: 1,
           paddingTop: "110px",
           paddingBottom: "40px",
-          width: "90%",
-          maxWidth: "1260px",
+          width: "100%",
+          maxWidth: "1100px",
           margin: "0 auto",
+          padding: "0 12px",  
         }}
       >
         <div style={{ marginBottom: "18px" }}>
@@ -270,7 +277,8 @@ function Profile() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "260px 1fr",
+            gridTemplateColumns: isMobile ? "1fr" : "260px 1fr",
+            minWidth: 0,
             gap: "22px",
             alignItems: "start",
           }}
@@ -404,6 +412,7 @@ function Profile() {
               display: "grid",
               gridTemplateColumns: "1fr",
               gap: "22px",
+              minWidth: 0,
             }}
           >
             <div
@@ -412,6 +421,7 @@ function Profile() {
                 backdropFilter: "blur(15px)",
                 border: "1px solid rgba(255,255,255,0.35)",
                 borderRadius: "28px",
+                minWidth: 0,
                 padding: "28px 32px 34px",
                 boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
               }}
@@ -430,7 +440,8 @@ function Profile() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
+                  gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                  minWidth: 0,
                   gap: "20px 28px",
                 }}
               >
@@ -575,7 +586,8 @@ function Profile() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1.5fr 0.9fr",
+                gridTemplateColumns: isMobile ? "1fr" : "1.5fr 0.9fr",
+                minWidth: 0,
                 gap: "22px",
                 alignItems: "stretch",
               }}
@@ -584,6 +596,7 @@ function Profile() {
                 style={{
                   background: "rgba(255,255,255,0.16)",
                   backdropFilter: "blur(15px)",
+                  minWidth: 0,
                   border: "1px solid rgba(255,255,255,0.35)",
                   borderRadius: "28px",
                   padding: "26px 32px 20px",

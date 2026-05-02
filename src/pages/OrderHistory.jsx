@@ -10,6 +10,13 @@ function OrderHistory() {
   const [profileData, setProfileData] = useState({ fullName: "", email: "" });
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+useEffect(() => {
+  const handleResize = () => setIsMobile(window.innerWidth < 768);
+  window.addEventListener("resize", handleResize);
+  return () => window.removeEventListener("resize", handleResize);
+}, []);
 
   // Load profile and orders from BACKEND only
   useEffect(() => {
@@ -97,7 +104,8 @@ function OrderHistory() {
           ← Back
         </button>
 
-        <div className="order-history-layout" style={{ display: "grid", gridTemplateColumns: "230px 1fr", gap: "34px", alignItems: "start" }}>
+        <div className="order-history-layout" style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "230px 1fr",
+minWidth: 0, gap: "34px", alignItems: "start" }}>
           {/* Profile Sidebar */}
           <div style={{
             background: "rgba(255,255,255,0.12)",
@@ -107,6 +115,8 @@ function OrderHistory() {
             backdropFilter: "blur(14px)",
             textAlign: "center",
             minHeight: "230px",
+
+            minWidth: 0,
           }}>
             <div style={{ width: "132px", height: "132px", borderRadius: "50%", overflow: "hidden", margin: "0 auto 18px", background: "rgba(255,255,255,0.24)" }}>
               <img src={profileImage} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -127,6 +137,7 @@ function OrderHistory() {
             padding: "32px",
             backdropFilter: "blur(14px)",
             minHeight: "540px",
+            minWidth: 0,
           }}>
             <h1 style={{ margin: "0 0 22px", fontSize: "28px", color: "#111827", fontWeight: "700" }}>Order History</h1>
 
