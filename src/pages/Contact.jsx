@@ -1,8 +1,9 @@
+// frontend/src/pages/Contact.jsx
 import { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import Button from "../components/Button";
 import Input from "../components/Input";
-import { getCurrentUser, getAuthToken, getCurrentUserId } from "../utils/auth";
+import { getCurrentUser, getAuthToken, getCurrentUserId } from "../services/api";
 
 function Contact() {
   const [form, setForm] = useState({
@@ -22,7 +23,6 @@ function Contact() {
   const [userOrders, setUserOrders] = useState([]);
   const [fetchingOrders, setFetchingOrders] = useState(false);
 
-  const isLoggedIn = true;
   const isMobile = window.innerWidth <= 768;
   const userId = getCurrentUserId();
 
@@ -35,9 +35,7 @@ function Contact() {
       if (token && currentUser) {
         try {
           const response = await fetch(`http://localhost:5000/api/auth/profile`, {
-            headers: {
-              "Authorization": `Bearer ${token}`
-            }
+            headers: { "Authorization": `Bearer ${token}` }
           });
           
           if (response.ok) {
@@ -71,51 +69,32 @@ function Contact() {
 
     loadProfileData();
     
-    // Load FAQs
+    // Load FAQs from backend
     fetch("http://localhost:5000/api/faqs")
       .then(res => res.json())
       .then(data => setFaqs(data))
       .catch(err => console.log(err));
   }, []);
 
-  // Load user's orders from localStorage (where orders are actually stored)
+  // Load user's orders from BACKEND
   useEffect(() => {
-    const loadUserOrders = () => {
+    const loadUserOrders = async () => {
+      const token = getAuthToken();
+      if (!token) {
+        setFetchingOrders(false);
+        return;
+      }
+      
       setFetchingOrders(true);
       try {
-        // Get orders from localStorage
-        const storedOrders = JSON.parse(localStorage.getItem("orders")) || [];
+        const response = await fetch(`http://localhost:5000/api/orders/my-orders`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
         
-        // Get current user info
-        const currentUser = getCurrentUser();
-        const currentEmail = form.email || currentUser?.email;
-        
-        // Filter orders for current user
-        let filteredOrders = [];
-        
-        if (currentEmail) {
-          // Filter by customer email
-          filteredOrders = storedOrders.filter(
-            order => order.customer?.email === currentEmail
-          );
+        if (response.ok) {
+          const ordersData = await response.json();
+          setUserOrders(ordersData);
         }
-        
-        // Also try to filter by userId if available
-        if (filteredOrders.length === 0 && userId) {
-          filteredOrders = storedOrders.filter(
-            order => order.userId === userId
-          );
-        }
-        
-        // If still no orders, show all orders (for testing)
-        if (filteredOrders.length === 0) {
-          filteredOrders = storedOrders;
-        }
-        
-        // Sort orders by date (newest first)
-        filteredOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
-        
-        setUserOrders(filteredOrders);
       } catch (error) {
         console.error("Error loading orders:", error);
         setUserOrders([]);
@@ -124,17 +103,16 @@ function Contact() {
       }
     };
 
-    // Load orders when email is available
+    // Load orders when user is logged in
     if (form.email) {
       loadUserOrders();
     } else {
-      // Try to load with current user
       const currentUser = getCurrentUser();
       if (currentUser?.email) {
         setForm(prev => ({ ...prev, email: currentUser.email }));
       }
     }
-  }, [form.email, userId]);
+  }, [form.email]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -158,10 +136,6 @@ function Contact() {
 
   const validateForm = () => {
     const newErrors = {};
-
-    if (!isLoggedIn) {
-      newErrors.login = "Please log in to submit a ticket";
-    }
 
     if (!form.fullName.trim()) {
       newErrors.fullName = "Name is required";
@@ -199,35 +173,33 @@ function Contact() {
       return;
     }
 
-    const newTicket = {
+    const ticketData = {
       customer: form.fullName,
       email: form.email,
       phone: form.phone,
       orderNumber: form.orderId || "N/A",
-      amount: "-",
-      status: "Pending",
-      date: new Date().toLocaleDateString(),
-      issueType: form.subject,
-      refundEligibility: "Pending",
       subject: form.subject,
       message: form.message,
-      orderItems: [],
+      status: "Pending",
+      date: new Date().toLocaleDateString(),
     };
 
     try {
       const token = getAuthToken();
-      await fetch("http://localhost:5000/api/tickets", {
+      const response = await fetch("http://localhost:5000/api/tickets", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
           "Authorization": token ? `Bearer ${token}` : ""
         },
-        body: JSON.stringify(newTicket),
+        body: JSON.stringify(ticketData),
       });
+
+      if (!response.ok) throw new Error("Failed to submit ticket");
 
       setSuccessMessage("Support ticket submitted successfully");
 
-      // Clear only ticket-specific fields, keep profile info
+      // Clear only ticket-specific fields
       setForm((prev) => ({
         ...prev,
         orderId: "",
@@ -247,10 +219,8 @@ function Contact() {
 
   // Helper function to format order ID
   const formatOrderId = (order) => {
-    // Return the actual order ID from storage
-    if (order.id) return order.id;
     if (order._id) return `#${order._id.slice(-8)}`;
-    if (order.orderId) return order.orderId;
+    if (order.id) return order.id;
     return "N/A";
   };
 
@@ -389,11 +359,7 @@ function Contact() {
               Contact Us
             </h1>
 
-            {errors.login && (
-              <p style={{ color: "#ff5a45" }}>{errors.login}</p>
-            )}
-
-            {/* Full Name - Editable, pre-filled from profile */}
+            {/* Full Name */}
             <Input 
               label="Full Name" 
               name="fullName" 
@@ -402,7 +368,7 @@ function Contact() {
               error={errors.fullName} 
             />
 
-            {/* Order Number - Dropdown with user's orders */}
+            {/* Order Number - Dropdown with user's orders from BACKEND */}
             <div style={{ marginBottom: "20px" }}>
               <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", color: "#444" }}>
                 Order Number
@@ -438,36 +404,31 @@ function Contact() {
                   }}
                 >
                   <option value="">-- Select an order (optional) --</option>
-                  {userOrders.map((order, index) => (
-                    <option key={order.id || order._id || index} value={order.id || order._id || `order-${index}`}>
-                      {formatOrderId(order)} - ${(order.total || order.subtotal || 0).toFixed(2)} - {order.status || "Pending"} - {new Date(order.date).toLocaleDateString()}
+                  {userOrders.map((order) => (
+                    <option key={order._id} value={order._id}>
+                      {formatOrderId(order)} - {order.items?.length || 0} item(s) - {order.status || "Pending"} - {new Date(order.createdAt).toLocaleDateString()}
                     </option>
                   ))}
                 </select>
               ) : (
-                <>
-                  <input
-                    type="text"
-                    name="orderId"
-                    placeholder="No orders found. Type manually (optional)"
-                    value={form.orderId}
-                    onChange={handleChange}
-                    style={{
-                      width: "100%",
-                      padding: "12px 14px",
-                      borderRadius: "10px",
-                      border: "1px solid #b9b9b9",
-                      outline: "none",
-                      fontSize: "14px",
-                      fontFamily: "Josefin Sans, sans-serif",
-                      boxSizing: "border-box",
-                      background: "white",
-                    }}
-                  />
-                </>
-              )}
-              {errors.orderId && (
-                <p style={{ color: "#ff5a45", fontSize: "12px", marginTop: "6px" }}>{errors.orderId}</p>
+                <input
+                  type="text"
+                  name="orderId"
+                  placeholder="No orders found. Type manually (optional)"
+                  value={form.orderId}
+                  onChange={handleChange}
+                  style={{
+                    width: "100%",
+                    padding: "12px 14px",
+                    borderRadius: "10px",
+                    border: "1px solid #b9b9b9",
+                    outline: "none",
+                    fontSize: "14px",
+                    fontFamily: "Josefin Sans, sans-serif",
+                    boxSizing: "border-box",
+                    background: "white",
+                  }}
+                />
               )}
               <small style={{ color: "#666", fontSize: "12px", display: "block", marginTop: "5px" }}>
                 {userOrders.length > 0 
@@ -476,7 +437,7 @@ function Contact() {
               </small>
             </div>
 
-            {/* Email - Read Only (NOT Editable) */}
+            {/* Email - Read Only */}
             <div style={{ marginBottom: "20px" }}>
               <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", color: "#444" }}>
                 Email
@@ -502,7 +463,7 @@ function Contact() {
               {errors.email && <p style={{ color: "#ff5a45", fontSize: "12px", marginTop: "6px" }}>{errors.email}</p>}
             </div>
 
-            {/* Phone Number - Editable, pre-filled from profile */}
+            {/* Phone Number */}
             <Input 
               label="Phone Number" 
               name="phone" 
@@ -511,7 +472,7 @@ function Contact() {
               error={errors.phone} 
             />
 
-            {/* Subject - User enters */}
+            {/* Subject */}
             <Input 
               label="Subject" 
               name="subject" 
@@ -520,7 +481,7 @@ function Contact() {
               error={errors.subject} 
             />
 
-            {/* Message - User enters */}
+            {/* Message */}
             <Input 
               label="Message" 
               name="message" 
@@ -533,7 +494,9 @@ function Contact() {
             <Button text="Submit" variant="purple" onClick={handleSubmit} />
 
             {successMessage && (
-              <p style={{ color: "#39a86f", marginTop: "10px" }}>{successMessage}</p>
+              <p style={{ color: successMessage.includes("successfully") ? "#39a86f" : "#ff5a45", marginTop: "10px" }}>
+                {successMessage}
+              </p>
             )}
           </div>
         </div>

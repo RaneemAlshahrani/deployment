@@ -1,8 +1,7 @@
-// src/pages/Login.jsx
+// frontend/src/pages/Login.jsx
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { signin, saveUser, setAuthToken } from "../services/api";
-import "../styles/Auth.css";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -48,6 +47,9 @@ const Login = () => {
 
   return (
     <div className="auth-container">
+      <div className="bubble-1"></div>
+      <div className="bubble-2"></div>
+      
       <div className="auth-card">
         <h2>Welcome Back!</h2>
         <p>Please login to your account</p>
@@ -55,8 +57,8 @@ const Login = () => {
         {error && <div className="auth-error">{error}</div>}
         
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
+          <div className="auth-form-group">
+            <label htmlFor="email">Email Address</label>
             <input
               type="email"
               id="email"
@@ -68,7 +70,7 @@ const Login = () => {
             />
           </div>
           
-          <div className="form-group">
+          <div className="auth-form-group">
             <label htmlFor="password">Password</label>
             <input
               type="password"
@@ -81,7 +83,7 @@ const Login = () => {
             />
           </div>
           
-          <button type="submit" disabled={loading}>
+          <button type="submit" className="auth-button" disabled={loading}>
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>

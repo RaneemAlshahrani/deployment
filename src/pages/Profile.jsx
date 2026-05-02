@@ -1,11 +1,12 @@
-// src/pages/Profile.jsx
+// frontend/src/pages/Profile.jsx
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Button from "../components/Button";
 import defaultProfileImage from "../assets/Profile .png";
 import billingCard from "../assets/Card.png";
-import { getCurrentUser, getAuthToken } from "../services/api";
+import { getCurrentUser, getAuthToken, updateUserProfile, uploadProfileImage, getUserOrders } from "../services/api";
+import { formatSAR } from "../utils/currency";
 
 function Profile() {
   const navigate = useNavigate();
@@ -22,11 +23,9 @@ function Profile() {
   const [savedMessage, setSavedMessage] = useState("");
   const [orders, setOrders] = useState([]);
   const [imageMessage, setImageMessage] = useState("");
-  const [savedImage, setSavedImage] = useState(() => {
-    return localStorage.getItem("profileImage") || defaultProfileImage;
-  });
+  const [profileImage, setProfileImage] = useState(defaultProfileImage);
 
-  // Fetch user data from backend
+  // Fetch user data and orders from backend
   useEffect(() => {
     const fetchUserData = async () => {
       const token = getAuthToken();
@@ -38,10 +37,9 @@ function Profile() {
       }
       
       try {
+        // Fetch profile from backend
         const response = await fetch(`http://localhost:5000/api/auth/profile`, {
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
+          headers: { "Authorization": `Bearer ${token}` }
         });
         
         if (response.ok) {
@@ -52,13 +50,27 @@ function Profile() {
             phone: userData.user.phone || "",
             address: userData.user.address || "",
           });
+          if (userData.user.profileImage) {
+            setProfileImage(userData.user.profileImage);
+          }
         } else {
+          // Fallback to cached user
           setFormData({
             fullName: currentUser.fullName || "",
             email: currentUser.email || "",
             phone: currentUser.phone || "",
             address: currentUser.address || "",
           });
+        }
+        
+        // Fetch orders from backend
+        const ordersResponse = await fetch(`http://localhost:5000/api/orders/my-orders`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if (ordersResponse.ok) {
+          const ordersData = await ordersResponse.json();
+          setOrders(ordersData);
         }
       } catch (error) {
         console.error("Error fetching user:", error);
@@ -74,10 +86,6 @@ function Profile() {
     };
     
     fetchUserData();
-    
-    // Fetch orders
-    const storedOrders = JSON.parse(localStorage.getItem("orders")) || [];
-    setOrders(storedOrders);
   }, [navigate]);
 
   const formatDate = (dateString) => {
@@ -135,40 +143,26 @@ function Profile() {
     }
 
     try {
-      const updateData = {
+      const result = await updateUserProfile({
         fullName: formData.fullName,
         phone: formData.phone,
         address: formData.address,
-      };
-
-      const response = await fetch("http://localhost:5000/api/auth/profile", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(updateData)
       });
-
-      if (response.ok) {
-        const updatedUser = await response.json();
-        const localUser = getCurrentUser();
-        if (localUser) {
-          localUser.fullName = updatedUser.user.fullName;
-          localUser.phone = updatedUser.user.phone;
-          localUser.address = updatedUser.user.address;
-          localStorage.setItem("user", JSON.stringify(localUser));
-        }
-        setSavedMessage("Profile updated successfully!");
-        
-        setTimeout(() => setSavedMessage(""), 3000);
-      } else {
-        const error = await response.json();
-        setSavedMessage(error.message || "Failed to update profile");
+      
+      // Update cached user data
+      const currentUser = getCurrentUser();
+      if (currentUser) {
+        currentUser.fullName = formData.fullName;
+        currentUser.phone = formData.phone;
+        currentUser.address = formData.address;
+        localStorage.setItem("user", JSON.stringify(currentUser));
       }
+      
+      setSavedMessage("Profile updated successfully!");
+      setTimeout(() => setSavedMessage(""), 3000);
     } catch (error) {
       console.error("Error updating profile:", error);
-      setSavedMessage("Error updating profile");
+      setSavedMessage(error.message || "Error updating profile");
     }
   };
 
@@ -178,7 +172,7 @@ function Profile() {
     }
   };
 
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -193,22 +187,33 @@ function Profile() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result;
-      setSavedImage(result);
-      localStorage.setItem("profileImage", result);
+    try {
+      const result = await uploadProfileImage(file);
+      setProfileImage(result.user.profileImage);
       setImageMessage("Profile picture updated.");
-      setSavedMessage("");
-    };
-    reader.readAsDataURL(file);
+      
+      // Update cached user
+      const currentUser = getCurrentUser();
+      if (currentUser) {
+        currentUser.profileImage = result.user.profileImage;
+        localStorage.setItem("user", JSON.stringify(currentUser));
+      }
+      
+      setTimeout(() => setImageMessage(""), 3000);
+    } catch (error) {
+      console.error(error);
+      setImageMessage("Failed to upload image");
+    }
   };
 
-  const handleRemoveImage = () => {
-    setSavedImage(defaultProfileImage);
-    localStorage.removeItem("profileImage");
+  const handleRemoveImage = async () => {
+    setProfileImage(defaultProfileImage);
     setImageMessage("Profile picture removed.");
-    setSavedMessage("");
+    
+    // Note: You'd need a backend endpoint to remove the image
+    // For now, just update local state
+    setTimeout(() => setImageMessage(""), 3000);
+    
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -299,7 +304,7 @@ function Profile() {
                 }}
               >
                 <img
-                  src={savedImage}
+                  src={profileImage}
                   alt="Profile"
                   style={{
                     width: "100%",
@@ -385,7 +390,7 @@ function Profile() {
                 <p
                   style={{
                     margin: "4px 0 0",
-                    color: "#ff4d6d",
+                    color: imageMessage.includes("updated") ? "#39a86f" : "#ff4d6d",
                     fontSize: "13px",
                   }}
                 >
@@ -460,7 +465,7 @@ function Profile() {
                   )}
                 </div>
 
-                {/* Email - Display as Text */}
+                {/* Email - Read Only */}
                 <div>
                   <label style={{ display: "block", marginBottom: "8px", color: "#444", fontSize: "15px" }}>
                     Email
@@ -622,7 +627,7 @@ function Profile() {
                       >
                         <th style={{ padding: "14px 10px", fontSize: "14px" }}>Order ID</th>
                         <th style={{ padding: "14px 10px", fontSize: "14px" }}>Date</th>
-                        <th style={{ padding: "14px 10px", fontSize: "14px" }}>Item</th>
+                        <th style={{ padding: "14px 10px", fontSize: "14px" }}>Items</th>
                         <th style={{ padding: "14px 10px", fontSize: "14px" }}>Total</th>
                         <th style={{ padding: "14px 10px", fontSize: "14px" }}>Status</th>
                       </tr>
@@ -631,15 +636,23 @@ function Profile() {
                       {orders.length > 0 ? (
                         orders.slice(0, 3).map((order, index) => {
                           const itemNames = order.items && order.items.length > 0
-                            ? order.items.map((item) => item.item).join(", ")
-                            : order.item || order.name || "Unknown Item";
+                            ? order.items.map((item) => item.name).join(", ")
+                            : "Unknown Item";
 
                           return (
-                            <tr key={order.id || index} style={{ borderTop: "1px solid rgba(255,255,255,0.35)" }}>
-                              <td style={{ padding: "18px 10px", color: "#374151" }}>{order.id || `#${1000 + index}`}</td>
-                              <td style={{ padding: "18px 10px", color: "#374151" }}>{formatDate(order.date)}</td>
-                              <td style={{ padding: "18px 10px", color: "#374151" }}>{itemNames}</td>
-                              <td style={{ padding: "18px 10px", color: "#374151" }}>${(order.total || order.subtotal || 0).toFixed(2)}</td>
+                            <tr key={order._id || index} style={{ borderTop: "1px solid rgba(255,255,255,0.35)" }}>
+                              <td style={{ padding: "18px 10px", color: "#374151" }}>
+                                #{order._id?.slice(-8) || `ORD${1000 + index}`}
+                              </td>
+                              <td style={{ padding: "18px 10px", color: "#374151" }}>
+                                {formatDate(order.createdAt)}
+                              </td>
+                              <td style={{ padding: "18px 10px", color: "#374151" }}>
+                                {itemNames}
+                              </td>
+                              <td style={{ padding: "18px 10px", color: "#374151" }}>
+                                {formatSAR(order.totalPrice)}
+                              </td>
                               <td style={{ padding: "18px 10px" }}>
                                 <span style={{
                                   background: "#b99af1",

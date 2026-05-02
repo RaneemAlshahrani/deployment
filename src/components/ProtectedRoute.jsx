@@ -1,19 +1,28 @@
-// src/components/ProtectedRoute.jsx
+// frontend/src/components/ProtectedRoute.jsx
 import { Navigate } from "react-router-dom";
-import { getCurrentUser } from "../services/api";
+import { useAuth } from "../hooks/useAuth";
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const user = getCurrentUser();
-  const token = localStorage.getItem("token");
+  const { user, isAuthenticated, loading } = useAuth();
 
-  // Check if user is authenticated
-  if (!token || !user) {
+  if (loading) {
+    return (
+      <div style={{ 
+        minHeight: "100vh", 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center" 
+      }}>
+        <div>Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
     return <Navigate to="/" replace />;
   }
 
-  // Check if user has required role
-  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-    // Redirect to home if role not allowed
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
     return <Navigate to="/home" replace />;
   }
 

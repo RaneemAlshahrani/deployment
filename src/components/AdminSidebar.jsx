@@ -1,8 +1,17 @@
+// frontend/src/components/AdminSidebar.jsx
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/bubble-logo.png";
 
 function AdminSidebar({ activePage }) {
   const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // Clear all auth data
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    // Redirect to login
+    navigate("/");
+  };
 
   return (
     <div className="sidebar">
@@ -54,12 +63,7 @@ function AdminSidebar({ activePage }) {
 
       <div className="spacer" />
 
-      <button
-        onClick={() => {
-          localStorage.removeItem("currentUser");
-          navigate("/");
-        }}
-      >
+      <button onClick={handleLogout}>
         Logout
       </button>
     </div>

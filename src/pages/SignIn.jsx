@@ -1,8 +1,7 @@
-// src/pages/SignIn.jsx
+// frontend/src/pages/SignIn.jsx
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { signup, saveUser, setAuthToken } from "../services/api";
-import "../styles/Auth.css";
 
 const SignIn = () => {
   const navigate = useNavigate();
@@ -25,34 +24,29 @@ const SignIn = () => {
     setError("");
   };
 
-  // Simple email validation that accepts dots
   const isValidEmail = (email) => {
-    // Basic check: must contain @ and something after
     const atIndex = email.indexOf('@');
     if (atIndex === -1) return false;
-    
     const localPart = email.substring(0, atIndex);
     const domainPart = email.substring(atIndex + 1);
-    
-    // Local part can have letters, numbers, dots, underscores, etc.
-    // Domain must have at least one dot
-    return localPart.length > 0 && 
-           domainPart.length > 0 && 
-           domainPart.includes('.');
+    return localPart.length > 0 && domainPart.length > 0 && domainPart.includes('.');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Check if passwords match
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
       return;
     }
     
-    // Validate email format
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    
     if (!isValidEmail(formData.email)) {
-      setError("Please enter a valid email address (e.g., name@example.com or name.last@example.com)");
+      setError("Please enter a valid email address");
       return;
     }
     
@@ -82,14 +76,17 @@ const SignIn = () => {
 
   return (
     <div className="auth-container">
+      <div className="bubble-1"></div>
+      <div className="bubble-2"></div>
+      
       <div className="auth-card">
-        <h2>Create Account</h2>
+        <h2>Create Account </h2>
         <p>Join us to start shopping!</p>
         
         {error && <div className="auth-error">{error}</div>}
         
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
+          <div className="auth-form-group">
             <label htmlFor="fullName">Full Name *</label>
             <input
               type="text"
@@ -102,8 +99,8 @@ const SignIn = () => {
             />
           </div>
           
-          <div className="form-group">
-            <label htmlFor="email">Email *</label>
+          <div className="auth-form-group">
+            <label htmlFor="email">Email Address *</label>
             <input
               type="email"
               id="email"
@@ -111,14 +108,12 @@ const SignIn = () => {
               value={formData.email}
               onChange={handleChange}
               required
-              placeholder="Enter your email (e.g., john.doe@example.com)"
+              placeholder="Enter your email"
             />
-            <small style={{ color: "#666", fontSize: "12px", display: "block", marginTop: "5px" }}>
-              ✓ Dots (.) are allowed in email addresses (e.g., john.doe@example.com)
-            </small>
+            <small>✓ Dots (.) are allowed (e.g., john.doe@example.com)</small>
           </div>
           
-          <div className="form-group">
+          <div className="auth-form-group">
             <label htmlFor="password">Password *</label>
             <input
               type="password"
@@ -131,7 +126,7 @@ const SignIn = () => {
             />
           </div>
           
-          <div className="form-group">
+          <div className="auth-form-group">
             <label htmlFor="confirmPassword">Confirm Password *</label>
             <input
               type="password"
@@ -144,7 +139,7 @@ const SignIn = () => {
             />
           </div>
           
-          <div className="form-group">
+          <div className="auth-form-group">
             <label htmlFor="phone">Phone Number</label>
             <input
               type="tel"
@@ -156,7 +151,7 @@ const SignIn = () => {
             />
           </div>
           
-          <div className="form-group">
+          <div className="auth-form-group">
             <label htmlFor="address">Address</label>
             <textarea
               id="address"
@@ -168,7 +163,7 @@ const SignIn = () => {
             />
           </div>
           
-          <button type="submit" disabled={loading}>
+          <button type="submit" className="auth-button" disabled={loading}>
             {loading ? "Creating Account..." : "Sign Up"}
           </button>
         </form>

@@ -1,44 +1,73 @@
+/* frontend/src/styles/global.css */
 :root {
-  --primary: #b85c6b;
+  /* Primary Purple Theme */
+  --primary: #8f4bd8;
+  --primary-dark: #7a3fc2;
+  --primary-light: #b99af1;
+  --primary-gradient: linear-gradient(135deg, #cbb7e6, #a88bd8);
+  
+  /* Secondary Colors */
   --secondary: #d98c98;
-  --light-pink: #f3c7cf;
-  --soft-pink: #d99aa5;
+  --secondary-dark: #b84a57;
   --text-dark: #2e3d4c;
-
-  --purple-1: #cbb7e6;
-  --purple-2: #a88bd8;
+  --text-light: #666;
+  
+  /* Status Colors */
+  --success: #39a86f;
+  --error: #ff4d6d;
+  --warning: #ff9f43;
+  --info: #3d6fd1;
+  
+  /* Glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.12);
+  --glass-border: rgba(255, 255, 255, 0.25);
+  --glass-blur: blur(14px);
 }
 
-/* reset */
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   font-family: 'Josefin Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* pink pages */
+/* ==================== Page Backgrounds ==================== */
+/* Purple theme - PRIMARY */
+.purple-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #cbb7e6, #a88bd8);
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Pink theme - SECONDARY (for specific sections if needed) */
 .pink-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #b45f69, #d8a0aa);
+  position: relative;
+  overflow-x: hidden;
 }
 
-/* purple pages */
-.purple-page {
-  min-height: 100vh;
-  background: linear-gradient(135deg, var(--purple-1), var(--purple-2));
-  position: relative;
-  overflow: hidden;
-}
-/* yellow pages */
+/* Yellow theme - ACCENT (for specific sections if needed) */
 .yellow-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #d8b64f, #f3df8f);
+  background: linear-gradient(135deg, #f5e6a3, #e8d47a);
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
-/* bubbles */
+/* ==================== Bubble Decorations ==================== */
 .purple-page::before,
-.purple-page::after {
+.purple-page::after,
+.auth-container::before,
+.auth-container::after {
   content: "";
   position: absolute;
   border-radius: 50%;
@@ -46,8 +75,8 @@ body {
   z-index: 0;
 }
 
-/* bubble left */
-.purple-page::before {
+.purple-page::before,
+.auth-container::before {
   width: 420px;
   height: 420px;
   top: 80px;
@@ -56,30 +85,92 @@ body {
   opacity: 0.4;
 }
 
-/* bubble right */
-.purple-page::after {
+.purple-page::after,
+.auth-container::after {
   width: 380px;
   height: 380px;
-  top: 0;
+  bottom: 0;
   right: -60px;
   background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.5), rgba(255,255,255,0.1) 60%, transparent 75%);
   opacity: 0.4;
 }
 
-.btn-purple {
-  background: #8f4bd8;
+/* ==================== Glassmorphism Containers ==================== */
+.glass-card {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 28px;
+  backdrop-filter: var(--glass-blur);
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.glass-card-light {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 28px;
+  backdrop-filter: var(--glass-blur);
+}
+
+/* ==================== Buttons ==================== */
+/* Primary Purple Button */
+.btn-primary {
+  background: var(--primary);
   color: white;
   border: none;
   border-radius: 12px;
   padding: 12px 26px;
-  font-weight: 500;
+  font-weight: 600;
+  font-family: 'Josefin Sans', sans-serif;
   cursor: pointer;
   transition: all 0.25s ease;
 }
 
-.btn-purple:hover {
-  background: #7a3fc2;
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-dark);
   transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(143, 75, 216, 0.3);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Secondary Pink Button */
+.btn-secondary {
+  background: #e7c7cd;
+  color: #6d3a45;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 26px;
+  font-weight: 600;
+  font-family: 'Josefin Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #dcb5bc;
+  transform: translateY(-2px);
+}
+
+/* Purple Button (Alias for primary) */
+.btn-purple {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 26px;
+  font-weight: 600;
+  font-family: 'Josefin Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-purple:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(143, 75, 216, 0.3);
 }
 
 .btn-purple-disabled {
@@ -90,108 +181,408 @@ body {
   padding: 12px 26px;
   font-weight: 600;
   font-family: 'Josefin Sans', sans-serif;
-  white-space: nowrap;
   cursor: not-allowed;
-  opacity: 0.8;
+  opacity: 0.7;
 }
 
-.yellow-page::before,
-.yellow-page::after {
-  content: "";
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.yellow-page::before {
-  width: 420px;
-  height: 420px;
-  top: 80px;
-  left: -80px;
-  background: radial-gradient(
-    circle at 30% 30%,
-    rgba(255,255,255,0.6),
-    rgba(255,255,255,0.1) 60%,
-    transparent 75%
-  );
-  opacity: 0.4;
-}
-
-.yellow-page::after {
-  width: 380px;
-  height: 380px;
-  top: 0;
-  right: -60px;
-  background: radial-gradient(
-    circle at 30% 30%,
-    rgba(255,255,255,0.5),
-    rgba(255,255,255,0.1) 60%,
-    transparent 75%
-  );
-  opacity: 0.4;
-}
-
-.btn-primary {
-  background: #b45f69;
-  color: white;
-  border: none;
+/* Outline Button */
+.btn-outline {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 12px;
   padding: 12px 26px;
   font-weight: 600;
+  font-family: 'Josefin Sans', sans-serif;
+  color: var(--text-dark);
   cursor: pointer;
   transition: all 0.25s ease;
 }
 
-.btn-primary:hover {
-  background: #9e4f59;
+.btn-outline:hover {
+  background: rgba(255, 255, 255, 0.1);
   transform: translateY(-2px);
 }
 
-.btn-secondary {
-  background: #e7c7cd;
-  color: #6d3a45;
+/* ==================== Input Fields ==================== */
+.input-field {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #b9b9b9;
+  outline: none;
+  font-size: 14px;
+  font-family: 'Josefin Sans', sans-serif;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.95);
+  transition: all 0.25s ease;
+}
+
+.input-field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(143, 75, 216, 0.2);
+}
+
+.input-field.error {
+  border-color: var(--error);
+}
+
+.input-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-dark);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.input-error {
+  color: var(--error);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+/* ==================== Auth Pages (Login/SignIn) ==================== */
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #cbb7e6, #a88bd8);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Extra bubbles for auth pages */
+.auth-container .bubble-1 {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  top: -100px;
+  left: -100px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), rgba(255,255,255,0.05) 60%, transparent 75%);
+  pointer-events: none;
+}
+
+.auth-container .bubble-2 {
+  position: absolute;
+  width: 250px;
+  height: 250px;
+  bottom: -80px;
+  right: -80px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35), rgba(255,255,255,0.05) 60%, transparent 75%);
+  pointer-events: none;
+}
+
+.auth-card {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 28px;
+  backdrop-filter: var(--glass-blur);
+  padding: 40px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 1;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.auth-card h2 {
+  font-size: 32px;
+  color: var(--text-dark);
+  margin-bottom: 10px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.auth-card p {
+  color: #555;
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 16px;
+}
+
+.auth-form-group {
+  margin-bottom: 20px;
+}
+
+.auth-form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-dark);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.auth-form-group input,
+.auth-form-group textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 15px;
+  font-family: 'Josefin Sans', sans-serif;
+  transition: all 0.25s ease;
+}
+
+.auth-form-group input:focus,
+.auth-form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(143, 75, 216, 0.2);
+  background: white;
+}
+
+.auth-form-group small {
+  color: #666;
+  font-size: 11px;
+  margin-top: 5px;
+  display: block;
+}
+
+.auth-error {
+  background: rgba(255, 77, 109, 0.15);
+  color: var(--error);
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 14px;
+  border: 1px solid rgba(255, 77, 109, 0.3);
+}
+
+.auth-success {
+  background: rgba(57, 168, 111, 0.15);
+  color: var(--success);
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 14px;
+  border: 1px solid rgba(57, 168, 111, 0.3);
+}
+
+.auth-button {
+  width: 100%;
+  padding: 14px;
+  background: var(--primary);
+  color: white;
   border: none;
   border-radius: 12px;
-  padding: 12px 26px;
+  font-size: 16px;
   font-weight: 600;
+  font-family: 'Josefin Sans', sans-serif;
   cursor: pointer;
   transition: all 0.25s ease;
 }
 
-.btn-secondary:hover {
-  background: #dcb5bc;
+.auth-button:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(143, 75, 216, 0.3);
 }
 
-button {
-  font-family: 'Josefin Sans', sans-serif;
+.auth-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
+.auth-link {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 14px;
+  color: #555;
+}
+
+.auth-link a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.25s ease;
+}
+
+.auth-link a:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+/* ==================== Cards ==================== */
+.product-card {
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 20px;
+  padding: 10px;
+  text-align: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* ==================== Tables ==================== */
+.glass-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.glass-table thead tr {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.glass-table th {
+  padding: 14px 12px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: 15px;
+}
+
+.glass-table td {
+  padding: 14px 12px;
+  text-align: center;
+  color: #444;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+/* ==================== Animations ==================== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0px) scale(1);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ==================== Responsive ==================== */
 @media (max-width: 768px) {
-  /* Products page layout */
-  .purple-page > div {
-    width: 95% !important;
-    padding-top: 70px !important;
+  .auth-card {
+    padding: 30px 20px;
   }
-
-  .purple-page > div > div[style] {
-    flex-wrap: wrap !important;
+  
+  .auth-card h2 {
+    font-size: 26px;
   }
-
-  .purple-page > div > div > div:first-child {
-    width: 100% !important;
-    min-height: auto !important;
+  
+  .btn-primary, .btn-purple, .btn-secondary {
+    padding: 10px 20px;
+    font-size: 14px;
   }
-
-  .purple-page div[style*="grid"] {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 12px !important;
+  
+  .glass-table {
+    min-width: 600px;
   }
-}
-
-@media (max-width: 400px) {
-  .purple-page div[style*="grid"] {
-    grid-template-columns: 1fr !important;
+  
+  .glass-table th,
+  .glass-table td {
+    padding: 10px 8px;
+    font-size: 12px;
   }
 }
 
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 25px 16px;
+  }
+  
+  .auth-card h2 {
+    font-size: 24px;
+  }
+}
+
+/* ==================== Status Badges ==================== */
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-pending {
+  background: #ffd7c9;
+  color: #d96a3a;
+}
+
+.status-processing {
+  background: #d8e7ff;
+  color: #3d6fd1;
+}
+
+.status-shipped {
+  background: #d7f2d4;
+  color: #3d9b44;
+}
+
+.status-delivered {
+  background: #d8e7ff;
+  color: #3d6fd1;
+}
+
+.status-cancelled {
+  background: #ffe0e0;
+  color: #ff4d6d;
+}
+
+/* ==================== Utility Classes ==================== */
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+.mt-3 { margin-top: 24px; }
+.mt-4 { margin-top: 32px; }
+
+.mb-1 { margin-bottom: 8px; }
+.mb-2 { margin-bottom: 16px; }
+.mb-3 { margin-bottom: 24px; }
+.mb-4 { margin-bottom: 32px; }
+
+.p-1 { padding: 8px; }
+.p-2 { padding: 16px; }
+.p-3 { padding: 24px; }
+.p-4 { padding: 32px; }
+
+.w-100 { width: 100%; }
+.h-100 { height: 100%; }
+
+.cursor-pointer { cursor: pointer; }
+.disabled { opacity: 0.6; cursor: not-allowed; }

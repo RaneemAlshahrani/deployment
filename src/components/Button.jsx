@@ -1,3 +1,4 @@
+// frontend/src/components/Button.jsx
 function Button({ 
   text, 
   variant = "primary", 
@@ -11,6 +12,7 @@ function Button({
     secondary: "btn-secondary",
     purple: "btn-purple",
     purpleDisabled: "btn-purple-disabled",
+    outline: "btn-outline",
   };
 
   return (
