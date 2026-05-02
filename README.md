@@ -1,4 +1,3 @@
-````markdown
 # Bubble Soap Store
 
 ## Description
@@ -271,5 +270,3 @@ Bubble/
 * Repository uses `.gitignore` to exclude `node_modules` and sensitive files
 * Figma design will be provided separately
 
-```
-```
