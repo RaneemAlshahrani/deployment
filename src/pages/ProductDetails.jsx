@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getCurrentUserId } from "../utils/auth";
+import { getCurrentUserId, getCurrentUser } from "../utils/auth";
 import Button from "../components/Button";
 import bubble7 from "../assets/bubble7.png";
 import bubble8 from "../assets/bubble8.png";
@@ -12,10 +12,12 @@ function ProductDetails() {
     const navigate = useNavigate();
     const { id } = useParams();
     const userId = getCurrentUserId();
+    const currentUser = getCurrentUser();
     const isLoggedIn = !!userId;
 
     const [product, setProduct] = useState(null);
     const [reviews, setReviews] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
     const [addedToCart, setAddedToCart] = useState(false);
@@ -34,13 +36,20 @@ function ProductDetails() {
 
     // Product data
     useEffect(() => {
+        setLoading(true);
         fetch(`http://localhost:5000/api/products/${id}`)
             .then((res) => res.json())
             .then((data) => {
                 setProduct(data);
-                setReviews(data.reviews || []);
+                // Reviews should come from backend, but for now use localStorage or empty array
+                const storedReviews = JSON.parse(localStorage.getItem(`reviews_${id}`)) || data.reviews || [];
+                setReviews(storedReviews);
+                setLoading(false);
             })
-            .catch((err) => console.log(err));
+            .catch((err) => {
+                console.log(err);
+                setLoading(false);
+            });
     }, [id]);
 
     useEffect(() => {
@@ -57,18 +66,27 @@ function ProductDetails() {
             }
         };
 
-       checkWishlist();
+        checkWishlist();
         window.addEventListener("wishlistUpdated", checkWishlist);
         return () => window.removeEventListener("wishlistUpdated", checkWishlist);
     }, [userId, id]);
 
+    if (loading) {
+        return (
+            <div className="pink-page" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                Loading product...
+            </div>
+        );
+    }
+
     if (!product) {
         return (
-            <div className="pink-page">
+            <div className="pink-page" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 Product not available
             </div>
         );
     }
+
     const pageClass =
         product.theme === "purple"
             ? "purple-page"
@@ -77,11 +95,12 @@ function ProductDetails() {
                 : "pink-page";
 
     // Add product to cart
-    const handleAddToCart = () => {
+    const handleAddToCart = async () => {
         setAddedToCart(false);
 
         if (!isLoggedIn) {
             alert("Please login first");
+            navigate("/");
             return;
         }
 
@@ -89,32 +108,28 @@ function ProductDetails() {
             alert("Out of stock");
             return;
         }
-        // Get cart from localStorage
-        let storedCart =
-            JSON.parse(localStorage.getItem("cartItems")) || [];
 
-        const existingItem = storedCart.find(
-            (item) => item.id === product._id
-        );
+        try {
+            const response = await fetch("http://localhost:5000/api/cart", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    userId: userId,
+                    productId: product._id,
+                    quantity: 1,
+                }),
+            });
 
-        let updatedCart;
+            if (!response.ok) throw new Error("Failed to add to cart");
 
-        if (existingItem) {
-            updatedCart = storedCart.map((item) =>
-                item.id === product._id
-                    ? { ...item, quantity: item.quantity + 1 }
-                    : item
-            );
-        } else {
-            updatedCart = [
-                ...storedCart,
-                { id: product._id, quantity: 1 },
-            ];
+            setAddedToCart(true);
+            setTimeout(() => setAddedToCart(false), 3000);
+        } catch (error) {
+            console.error(error);
+            alert("Failed to add to cart");
         }
-
-        localStorage.setItem("cartItems", JSON.stringify(updatedCart));
-
-        setAddedToCart(true);
     };
 
     // Toggle wishlist
@@ -124,7 +139,6 @@ function ProductDetails() {
             navigate("/");
             return;
         }
-
 
         try {
             if (liked) {
@@ -146,7 +160,7 @@ function ProductDetails() {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
-                        userId: userId,  // Use actual userId
+                        userId: userId,
                         productId: product._id,
                         quantity: 1,
                     }),
@@ -169,8 +183,28 @@ function ProductDetails() {
 
         if (!reviewText.trim()) return;
 
-        setReviews([...reviews, reviewText]);
+        const newReview = {
+            id: Date.now(),
+            text: reviewText,
+            userName: currentUser?.fullName || "User",
+            userEmail: currentUser?.email || "",
+            date: new Date().toLocaleDateString(),
+        };
+
+        const updatedReviews = [...reviews, newReview];
+        setReviews(updatedReviews);
+        
+        // Save to localStorage (temp solution until backend review API is ready)
+        localStorage.setItem(`reviews_${id}`, JSON.stringify(updatedReviews));
+        
         setReviewText("");
+        
+        // Show success message
+        const successMsg = document.createElement("div");
+        successMsg.textContent = "Review added!";
+        successMsg.style.cssText = "position:fixed;bottom:20px;right:20px;background:#39a86f;color:white;padding:10px 20px;border-radius:10px;z-index:1000";
+        document.body.appendChild(successMsg);
+        setTimeout(() => successMsg.remove(), 2000);
     };
 
     return (
@@ -211,6 +245,7 @@ function ProductDetails() {
                     pointerEvents: "none",
                 }}
             />
+            
             {/* Go back to previous page */}
             <button
                 onClick={() => navigate(-1)}
@@ -327,7 +362,6 @@ function ProductDetails() {
                                 width: "100%",
                             }}
                         >
-                            {/* Add to cart button */}
                             <Button
                                 text="Add to Cart"
                                 variant={product.stock > 0 ? "primary" : "purpleDisabled"}
@@ -384,7 +418,7 @@ function ProductDetails() {
                     </div>
 
                     <div style={{ ...box(isMobile), paddingTop: "14px", paddingBottom: "14px" }}>
-                        <p style={labelStyle(isMobile)}>Reviews</p>
+                        <p style={labelStyle(isMobile)}>Reviews ({reviews.length})</p>
 
                         <div
                             style={{
@@ -398,7 +432,7 @@ function ProductDetails() {
 
                             <input
                                 type="text"
-                                placeholder="type here"
+                                placeholder="Write your review..."
                                 value={reviewText}
                                 onChange={(e) => setReviewText(e.target.value)}
                                 style={{
@@ -417,14 +451,16 @@ function ProductDetails() {
 
                             <button
                                 onClick={handleSendReview}
+                                disabled={!reviewText.trim()}
                                 style={{
                                     padding: isMobile ? "10px 12px" : "10px 14px",
                                     borderRadius: "12px",
                                     border: "none",
-                                    background: "#8f4bd8",
+                                    background: reviewText.trim() ? "#8f4bd8" : "#ccc",
                                     color: "white",
-                                    cursor: "pointer",
+                                    cursor: reviewText.trim() ? "pointer" : "not-allowed",
                                     fontFamily: "Josefin Sans, sans-serif",
+                                    opacity: reviewText.trim() ? 1 : 0.6,
                                 }}
                             >
                                 Send
@@ -441,16 +477,33 @@ function ProductDetails() {
                                     marginBottom: "10px",
                                 }}
                             >
-                                Only logged in users can review
+                                Please login to leave a review
                             </p>
                         )}
+                        
                         {/* Display reviews */}
-                        {reviews.map((review, index) => (
-                            <div key={index} style={reviewStyle(isMobile)}>
-                                <img src={profile} alt="profile" style={reviewIconStyle(isMobile)} />
-                                <span>{review}</span>
-                            </div>
-                        ))}
+                        {reviews.length > 0 ? (
+                            reviews.map((review, index) => (
+                                <div key={review.id || index} style={reviewStyle(isMobile)}>
+                                    <img src={profile} alt="profile" style={reviewIconStyle(isMobile)} />
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                                            <strong style={{ fontSize: "13px", color: "#5b3b45" }}>
+                                                {review.userName || "Anonymous"}
+                                            </strong>
+                                            {review.date && (
+                                                <span style={{ fontSize: "10px", color: "#999" }}>{review.date}</span>
+                                            )}
+                                        </div>
+                                        <span style={{ fontSize: "14px" }}>{review.text || review}</span>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <p style={{ textAlign: "center", color: "#999", padding: "20px" }}>
+                                No reviews yet. Be the first to review this product!
+                            </p>
+                        )}
                     </div>
                 </div>
             </div>
@@ -485,7 +538,7 @@ const valueStyle = (isMobile) => ({
 
 const reviewStyle = (isMobile) => ({
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: "10px",
     padding: isMobile ? "10px 12px" : "11px 13px",
     borderRadius: "18px",
