@@ -10,6 +10,8 @@ import { formatSAR } from "../utils/currency";
 function Cart() {
   const navigate = useNavigate();
   const isMobile = window.innerWidth <= 768;
+
+  // Get actual logged-in user
   const userId = getCurrentUserId();
   const isLoggedIn = !!userId;
 
@@ -318,26 +320,36 @@ function Cart() {
         ← Back
       </button>
 
-      <div style={{
-        display: "flex",
-        flexDirection: isMobile ? "column" : "row",
-        gap: "18px",
-        position: "relative",
-        zIndex: 2,
-      }}>
-        {/* Order Summary Sidebar */}
-        <div style={{
-          width: isMobile ? "100%" : "220px",
-          minWidth: isMobile ? "100%" : "220px",
-          background: "rgba(255,255,255,0.12)",
-          border: "1px solid rgba(255,255,255,0.25)",
-          borderRadius: "28px",
-          padding: "18px 16px",
-          backdropFilter: "blur(14px)",
-          boxSizing: "border-box",
-          alignSelf: isMobile ? "stretch" : "flex-start",
-        }}>
-          <h2 style={{ marginTop: 0, marginBottom: "14px", fontSize: isMobile ? "24px" : "22px", color: "#333" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: isMobile ? "column" : "row",
+          gap: "18px",
+          position: "relative",
+          zIndex: 2,
+        }}
+      >
+        <div
+          style={{
+            width: isMobile ? "100%" : "220px",
+            minWidth: isMobile ? "100%" : "220px",
+            background: "rgba(255,255,255,0.12)",
+            border: "1px solid rgba(255,255,255,0.25)",
+            borderRadius: "28px",
+            padding: "18px 16px",
+            backdropFilter: "blur(14px)",
+            boxSizing: "border-box",
+            alignSelf: isMobile ? "stretch" : "flex-start",
+          }}
+        >
+          <h2
+            style={{
+              marginTop: 0,
+              marginBottom: "14px",
+              fontSize: isMobile ? "24px" : "22px",
+              color: "#333",
+            }}
+          >
             Order Summary
           </h2>
 
@@ -526,5 +538,141 @@ function Cart() {
     </div>
   );
 }
+
+const glassBox = {
+  background: "rgba(255,255,255,0.12)",
+  border: "1px solid rgba(255,255,255,0.25)",
+  borderRadius: "28px",
+  padding: "18px",
+  backdropFilter: "blur(14px)",
+  boxSizing: "border-box",
+};
+
+const inputStyle = {
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: "10px",
+  border: "1px solid #b9b9b9",
+  outline: "none",
+  fontSize: "14px",
+  fontFamily: "Josefin Sans, sans-serif",
+  boxSizing: "border-box",
+};
+
+const summaryRow = {
+  display: "flex",
+  justifyContent: "space-between",
+  marginBottom: "10px",
+  color: "#444",
+  fontWeight: "500",
+};
+
+const tableWrapper = {
+  overflowX: "auto",
+  borderRadius: "14px",
+};
+
+const tableStyle = {
+  width: "100%",
+  borderCollapse: "collapse",
+  minWidth: "620px",
+  background: "rgba(255,255,255,0.22)",
+  borderRadius: "14px",
+  overflow: "hidden",
+};
+
+const tableHeadRow = {
+  background: "rgba(255,255,255,0.45)",
+};
+
+const thStyle = {
+  padding: "14px 12px",
+  textAlign: "center",
+  fontWeight: "600",
+  color: "#333",
+  fontSize: "15px",
+};
+
+const tdStyle = {
+  padding: "14px 12px",
+  textAlign: "center",
+  color: "#444",
+  borderTop: "1px solid rgba(0,0,0,0.06)",
+  fontSize: "14px",
+  verticalAlign: "middle",
+};
+
+const productCell = {
+  display: "flex",
+  alignItems: "center",
+  gap: "14px",
+};
+
+const productImageStyle = {
+  width: "74px",
+  height: "74px",
+  objectFit: "contain",
+};
+
+const qtyBox = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "6px",
+};
+
+const qtyBtn = {
+  width: "24px",
+  height: "24px",
+  borderRadius: "4px",
+  border: "1px solid rgba(0,0,0,0.08)",
+  background: "rgba(255,255,255,0.65)",
+  cursor: "pointer",
+};
+
+const qtyValue = {
+  minWidth: "18px",
+  display: "inline-block",
+  textAlign: "center",
+};
+
+const trashBtn = {
+  border: "none",
+  background: "transparent",
+  cursor: "pointer",
+  fontSize: "18px",
+};
+
+const cartMoveBtn = {
+  border: "none",
+  background: "transparent",
+  cursor: "pointer",
+  fontSize: "18px",
+};
+
+const successStyle = {
+  color: "#39a86f",
+  fontSize: "14px",
+  fontWeight: "500",
+  margin: 0,
+};
+
+const errorStyle = {
+  color: "#ff5a45",
+  fontSize: "13px",
+  marginTop: "6px",
+  marginBottom: 0,
+};
+
+const customDetailsBox = {
+  marginTop: "6px",
+  padding: "6px 8px",
+  borderRadius: "10px",
+  background: "rgba(255,255,255,0.35)",
+  color: "#555",
+  fontSize: "12px",
+  lineHeight: "1.5",
+  textAlign: "left",
+  maxWidth: "230px",
+};
 
 export default Cart;
