@@ -172,52 +172,54 @@ function ProductDetails() {
   };
 
   // Add new review
-  const handleSendReview = async () => {
-    if (!isLoggedIn) {
-      alert("Please login first");
-      return;
+const handleSendReview = async () => {
+  if (!isLoggedIn) {
+    alert("Please login first");
+    return;
+  }
+
+  if (!reviewText.trim()) return;
+
+  setSubmitting(true);
+
+  try {
+    // 👇 تأكد من التوكن
+    console.log("TOKEN:", token);
+
+    const headers = {
+      "Content-Type": "application/json",
+    };
+
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
     }
 
-    if (!reviewText.trim()) return;
+    const response = await fetch("http://localhost:5000/api/reviews", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        productId: product._id,
+        text: reviewText,
+        rating: 5,
+      }),
+    });
 
-    setSubmitting(true);
+    const data = await response.json();
 
-    try {
-      const response = await fetch("http://localhost:5000/api/reviews", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": token ? `Bearer ${token}` : ""
-        },
-        body: JSON.stringify({
-          productId: product._id,
-          text: reviewText,
-          rating: 5,
-        }),
-      });
-
-      if (response.ok) {
-        const newReview = await response.json();
-        setReviews([newReview, ...reviews]);
-        setReviewText("");
-        
-        // Show success message
-        const successMsg = document.createElement("div");
-        successMsg.textContent = "✨ Review added successfully!";
-        successMsg.style.cssText = `position:fixed;bottom:20px;right:20px;background:${themeData.primary};color:white;padding:12px 24px;border-radius:12px;z-index:1000;font-family:'Josefin Sans',sans-serif;`;
-        document.body.appendChild(successMsg);
-        setTimeout(() => successMsg.remove(), 2000);
-      } else {
-        const error = await response.json();
-        alert(error.message || "Failed to add review");
-      }
-    } catch (error) {
-      console.error("Error adding review:", error);
-      alert("Failed to add review");
-    } finally {
-      setSubmitting(false);
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to add review");
     }
-  };
+
+    setReviews([data, ...reviews]);
+    setReviewText("");
+
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   if (loading) {
     return (

@@ -1,7 +1,6 @@
 const jwt = require("jsonwebtoken");
 
-const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_key_change_this";
-
+const JWT_SECRET = process.env.JWT_SECRET || "bubble_secret_key_123";
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
