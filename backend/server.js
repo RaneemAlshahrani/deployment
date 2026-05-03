@@ -23,6 +23,16 @@ if (!process.env.VERCEL) {
  }
  app.use("/uploads", express.static(uploadDir));
 }
+// ==================== SERVE FRONTEND STATIC FILES ====================
+const frontendPath = path.join(__dirname, "../frontend/dist");
+console.log("Frontend path:", frontendPath);
+// Check if frontend dist exists
+if (fs.existsSync(frontendPath)) {
+ console.log("✅ Serving frontend from:", frontendPath);
+ app.use(express.static(frontendPath));
+} else {
+ console.log("❌ Frontend dist not found at:", frontendPath);
+}
 // ==================== Import Routes ====================
 const authRoutes = require("./routes/auth");
 const productRoutes = require("./routes/products");
@@ -63,6 +73,24 @@ app.get("/", (req, res) => {
    timestamp: new Date().toISOString(),
    env: process.env.VERCEL ? "vercel" : "development"
  });
+});
+// ==================== HANDLE REACT ROUTING ====================
+// This must come AFTER all API routes
+app.get("*", (req, res, next) => {
+ // Skip API routes
+ if (req.path.startsWith("/api/")) {
+   return next();
+ }
+ // Send index.html for all other routes (React router)
+ const indexPath = path.join(frontendPath, "index.html");
+ if (fs.existsSync(indexPath)) {
+   res.sendFile(indexPath);
+ } else {
+   res.status(404).json({
+     error: "Frontend not found",
+     message: "Please build the frontend with: cd frontend && npm run build"
+   });
+ }
 });
 // ==================== Error Handler ====================
 app.use((err, req, res, next) => {
