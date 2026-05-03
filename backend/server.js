@@ -93,7 +93,7 @@ if (fs.existsSync(frontendPath)) {
 }
 
 // React Router fallback — must be AFTER API routes
-app.get("*", (req, res) => {
+app.get("/{*splat}", (req, res) => {
   if (req.path.startsWith("/api/")) {
     return res.status(404).json({
       message: "API route not found"
